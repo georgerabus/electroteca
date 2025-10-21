@@ -42,8 +42,15 @@ return new class extends Migration
      */
     public function down(): void
     {
+    {
+        // Disable foreign key checks so we can drop tables that reference `users`.
+        Schema::disableForeignKeyConstraints();
+
         Schema::dropIfExists('users');
         Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');
+
+        Schema::enableForeignKeyConstraints();
+    }
     }
 };

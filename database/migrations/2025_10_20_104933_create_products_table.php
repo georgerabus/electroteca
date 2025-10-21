@@ -13,6 +13,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('slug')->unique();
             $table->text('description')->nullable();
+            $table->boolean('is_borrowed')->default(false);
             $table->decimal('price', 10, 2);
             $table->string('currency', 3)->default('MDL');
             $table->integer('stock_quantity')->default(0);
