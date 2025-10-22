@@ -31,7 +31,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 // ---------- dummy rows (frontend-only) ----------
 const ALL_ROWS: Row[] = [
     {
-        id: 'R-1001',
+        id: 'R-101',
         status: 'Picked up',
         product: 'Jumper Wires',
         requester: { name: 'Mihai T.', email: 'mihai.traian@utm.md' },
@@ -153,22 +153,7 @@ export default function Dashboard() {
         setProduct(val);
     };
 
-    const rows = useMemo(() => {
-        const q = query.trim().toLowerCase();
-        return ALL_ROWS.filter((r) => {
-            const okStatus = status === 'All' || r.status === status;
-            const okProduct =
-                product === 'All products' || r.product === product;
-            const okQuery =
-                q.length === 0 ||
-                r.product.toLowerCase().includes(q) ||
-                r.requester.name.toLowerCase().includes(q) ||
-                r.requester.email.toLowerCase().includes(q) ||
-                r.status.toLowerCase().includes(q);
-            return okStatus && okProduct && okQuery;
-        });
-    }, [status, product, query]);
-
+    const rows = ALL_ROWS;
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />

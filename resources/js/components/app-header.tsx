@@ -38,15 +38,16 @@ import AppLogoIcon from './app-logo-icon';
 
 const mainNavItems: NavItem[] = [
     {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-    {
         title: 'Shop',
         href: products(),
         icon: LayoutGrid,
     },
+    {
+        title: 'Dashboard',
+        href: dashboard(),
+        icon: LayoutGrid,
+    },
+
 ];
 
 const rightNavItems: NavItem[] = [
@@ -149,13 +150,17 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                         </Sheet>
                     </div>
 
-                    <Link
-                        href={dashboard()}
+                    {/* <Link
+                        href={products()}
                         prefetch
                         className="flex items-center space-x-2"
                     >
                         <AppLogo />
-                    </Link>
+                    </Link> */}
+                    <div className="flex items-center space-x-2">
+                    <AppLogo />
+                    </div>
+                    
 
                     {/* Desktop Navigation */}
                     <div className="ml-6 hidden h-full items-center space-x-6 lg:flex">
