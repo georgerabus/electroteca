@@ -1,6 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 
 type Product = {
     id: number;
@@ -20,7 +20,7 @@ type AdminProductsPageProps = {
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Admin', href: '/admin' },
-    { title: 'Products', href: '/admin/products' },
+    // { title: 'Products', href: '/admin/products' },
 ];
 
 function ProductRow({ product }: { product: Product }) {
@@ -87,6 +87,10 @@ export default function AdminProducts({
                     <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-500">
                         Add Product
                     </button>
+                    <Link className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-500"
+                    href={"/admin/users"}>
+                        Users
+                    </Link>
                 </div>
 
                 <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">

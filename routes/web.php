@@ -25,10 +25,9 @@ Route::get('/', [ProductsController::class, 'index'])->name('products');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    
 
     Route::prefix('admin')->name('admin.')->group(function () {
-            Route::get('products', [AdminController::class, 'products'])->name('products');
+            Route::get('/', [AdminController::class, 'products'])->name('products');
             Route::get('users', [AdminController::class, 'users'])->name('users');
             Route::get('users/{user}/dashboard', [AdminController::class, 'userDashboard'])->name('user.dashboard');
         });

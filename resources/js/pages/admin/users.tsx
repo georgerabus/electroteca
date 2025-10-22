@@ -15,8 +15,8 @@ type UsersPageProps = {
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Admin', href: '#' },
-    { title: 'Users', href: '#' },
+    { title: 'Admin', href: '/admin' },
+    { title: 'Users', href: '/admin/users' },
 ];
 
 export default function AdminUsers({ users }: UsersPageProps) {
