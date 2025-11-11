@@ -39,15 +39,26 @@ import AppLogoIcon from './app-logo-icon';
 const mainNavItems: NavItem[] = [
     {
         title: 'Shop',
-        href: products(),
+        href: '/shop',
         icon: LayoutGrid,
+    },
+    {
+        title: 'Blog',
+        href: '/blog',
+    },
+    {
+        title: 'Internship programs',
+        href: '/internship-programs',
     },
     {
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
     },
-
+    {
+        title: 'Contact',
+        href: '/contact',
+    },
 ];
 
 const rightNavItems: NavItem[] = [
@@ -120,30 +131,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                             ))}
                                         </div>
 
-                                        <div className="flex flex-col space-y-4">
-                                            {rightNavItems.map((item) => (
-                                                <a
-                                                    key={item.title}
-                                                    href={
-                                                        typeof item.href ===
-                                                        'string'
-                                                            ? item.href
-                                                            : item.href.url
-                                                    }
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="flex items-center space-x-2 font-medium"
-                                                >
-                                                    {item.icon && (
-                                                        <Icon
-                                                            iconNode={item.icon}
-                                                            className="h-5 w-5"
-                                                        />
-                                                    )}
-                                                    <span>{item.title}</span>
-                                                </a>
-                                            ))}
-                                        </div>
+                                        {/* Removed rightNavItems from mobile navigation */}
                                     </div>
                                 </div>
                             </SheetContent>
@@ -158,7 +146,15 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                         <AppLogo />
                     </Link> */}
                     <div className="flex items-center space-x-2">
-                    <AppLogo />
+                        <Link href="/" className="flex items-center gap-2 group" style={{ textDecoration: 'none' }}>
+                            <AppLogoIcon className="h-8 w-8 text-white bg-red-600 rounded-xl p-1" />
+                            <span
+                                className="text-2xl font-bold tracking-tight text-red-600 group-hover:text-red-700 transition-colors"
+                                style={{ letterSpacing: '0.01em' }}
+                            >
+                                Electroteca
+                            </span>
+                        </Link>
                     </div>
                     
 
@@ -210,65 +206,31 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                             >
                                 <Search className="!size-5 opacity-80 group-hover:opacity-100" />
                             </Button>
-                            <div className="hidden lg:flex">
-                                {rightNavItems.map((item) => (
-                                    <TooltipProvider
-                                        key={item.title}
-                                        delayDuration={0}
-                                    >
-                                        <Tooltip>
-                                            <TooltipTrigger>
-                                                <a
-                                                    href={
-                                                        typeof item.href ===
-                                                        'string'
-                                                            ? item.href
-                                                            : item.href.url
-                                                    }
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="group ml-1 inline-flex h-9 w-9 items-center justify-center rounded-md bg-transparent p-0 text-sm font-medium text-accent-foreground ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
-                                                >
-                                                    <span className="sr-only">
-                                                        {item.title}
-                                                    </span>
-                                                    {item.icon && (
-                                                        <Icon
-                                                            iconNode={item.icon}
-                                                            className="size-5 opacity-80 group-hover:opacity-100"
-                                                        />
-                                                    )}
-                                                </a>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                                <p>{item.title}</p>
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    </TooltipProvider>
-                                ))}
-                            </div>
+                            {/* Removed rightNavItems from desktop navigation */}
                         </div>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    className="size-10 rounded-full p-1"
-                                >
-                                    <Avatar className="size-8 overflow-hidden rounded-full">
-                                        <AvatarImage
-                                            src={auth.user.avatar}
-                                            alt={auth.user.name}
-                                        />
-                                        <AvatarFallback className="rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
-                                            {getInitials(auth.user.name)}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-56" align="end">
-                                <UserMenuContent user={auth.user} />
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        {auth.user && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        className="size-10 rounded-full p-1"
+                                    >
+                                        <Avatar className="size-8 overflow-hidden rounded-full">
+                                            <AvatarImage
+                                                src={auth.user.avatar}
+                                                alt={auth.user.name}
+                                            />
+                                            <AvatarFallback className="rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
+                                                {getInitials(auth.user.name)}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-56" align="end">
+                                    <UserMenuContent user={auth.user} />
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
                     </div>
                 </div>
             </div>

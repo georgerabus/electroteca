@@ -21,7 +21,23 @@ use App\Http\Controllers\AdminController;
 //         });
 // });
 
-Route::get('/', [ProductsController::class, 'index'])->name('products');
+Route::get('/', function () {
+    return Inertia::render('main');
+})->name('main');
+
+Route::get('/shop', [ProductsController::class, 'index'])->name('products');
+
+Route::get('/blog', function () {
+    return Inertia::render('blog');
+})->name('blog');
+
+Route::get('/internship-programs', function () {
+    return Inertia::render('internship-programs');
+})->name('internship-programs');
+
+Route::get('/contact', function () {
+    return Inertia::render('contact');
+})->name('contact');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');

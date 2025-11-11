@@ -73,30 +73,30 @@ function ProductCard({ product }: { product: Product }) {
                 )}
             </div>
             <div className="p-5">
-                <div className="mb-2 flex items-start justify-between gap-3">
-                    <h3 className="text-sm leading-tight font-medium">
+                {/* Title */}
+                <div className="mb-2">
+                    <h3 className="text-base leading-tight font-semibold">
                         {product.name}
                     </h3>
-                    <div className="text-right">
-                        <div className="text-sm font-medium">
-                            {product.price} {product.currency}
-                        </div>
-                        <div className="text-xs opacity-60">
-                            Stock: {product.stock_quantity}
-                        </div>
-                    </div>
                 </div>
-                <p className="mb-3 line-clamp-2 text-xs opacity-60">
+                {/* Price + stock aligned left */}
+                <div className="mb-2 flex items-center gap-3 text-sm">
+                    <div className="font-medium">
+                        {product.price} {product.currency}
+                    </div>
+                    <div className="opacity-60">Stock: {product.stock_quantity}</div>
+                </div>
+                <p className="mb-3 line-clamp-2 text-xs opacity-70">
                     {product.description}
                 </p>
-                <div className="mb-4 text-xs opacity-50">
+                <div className="mb-4 text-xs opacity-60">
                     Category: {product.category}
                 </div>
                 <button
                     disabled={!product.is_available}
                     className={`w-full rounded-xl px-4 py-2.5 text-sm font-medium transition ${
                         product.is_available
-                            ? 'bg-emerald-600 text-white hover:bg-emerald-500'
+                            ? 'bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400'
                             : 'cursor-not-allowed bg-zinc-800 text-zinc-500'
                     }`}
                 >
