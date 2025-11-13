@@ -32,9 +32,10 @@ import { cn } from '@/lib/utils';
 import { dashboard, products } from '@/routes';
 import { type BreadcrumbItem, type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Menu, Search, ShoppingCart } from 'lucide-react';
 import AppLogo from './app-logo';
 import AppLogoIcon from './app-logo-icon';
+import { useCart } from '@/hooks/use-cart';
 
 const mainNavItems: NavItem[] = [
     {
@@ -85,6 +86,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
     const page = usePage<SharedData>();
     const { auth } = page.props;
     const getInitials = useInitials();
+    const { itemCount } = useCart();
     return (
         <>
             <div className="border-b border-sidebar-border/80">
@@ -199,6 +201,13 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
 
                     <div className="ml-auto flex items-center space-x-2">
                         <div className="relative flex items-center space-x-1">
+                            {/* Cart Icon */}
+                            <Link href="/cart" className="relative flex items-center justify-center group rounded hover:bg-white/10 transition p-1">
+                                <ShoppingCart className="h-6 w-6 text-white opacity-80 group-hover:opacity-100" />
+                                {itemCount > 0 && (
+                                    <span className="absolute -top-0.5 -right-0.5 px-2 py-0.5 text-xs rounded-full bg-red-600 text-white font-bold" style={{fontSize:'10px'}}>{itemCount}</span>
+                                )}
+                            </Link>
                             <Button
                                 variant="ghost"
                                 size="icon"

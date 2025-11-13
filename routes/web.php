@@ -26,6 +26,7 @@ Route::get('/', function () {
 })->name('main');
 
 Route::get('/shop', [ProductsController::class, 'index'])->name('products');
+Route::get('/shop/{slug}', [ProductsController::class, 'show'])->name('products.show');
 
 Route::get('/blog', function () {
     return Inertia::render('blog');

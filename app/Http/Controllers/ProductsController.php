@@ -76,6 +76,7 @@ class ProductsController extends Controller
             return [
                 'id' => $product->id,
                 'name' => $product->name,
+                'slug' => $product->slug,
                 'description' => $product->description,
                 'price' => number_format($product->price, 2),
                 'currency' => $product->currency ?? 'MDL',
@@ -92,6 +93,28 @@ class ProductsController extends Controller
             'products' => $products,
             'categories' => $categories,
             'filters' => $filters,
+        ]);
+    }
+
+    public function show(string $slug)
+    {
+        $product = Product::with('category')->where('slug', $slug)->firstOrFail();
+
+        $productData = [
+            'id' => $product->id,
+            'name' => $product->name,
+            'slug' => $product->slug,
+            'description' => $product->description,
+            'price' => number_format($product->price, 2),
+            'currency' => $product->currency ?? 'MDL',
+            'stock_quantity' => $product->stock_quantity,
+            'is_available' => $product->is_available && $product->stock_quantity > 0,
+            'category' => $product->category->name,
+            'image_url' => $product->image_url,
+        ];
+
+        return Inertia::render('product-show', [
+            'product' => $productData,
         ]);
     }
 }

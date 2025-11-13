@@ -1,12 +1,14 @@
 import AppLayout from '@/layouts/app-layout';
 import { products } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { ChangeEvent, useMemo, useState } from 'react';
+import { ShoppingCart } from 'lucide-react';
 
 type Product = {
     id: number;
     name: string;
+    slug?: string;
     description: string;
     price: string;
     currency: string;
@@ -59,14 +61,52 @@ function ToolbarSelect(
 }
 
 function ProductCard({ product }: { product: Product }) {
+    const [addedToCart, setAddedToCart] = useState(false);
+
+    const handleAddToCart = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Get existing cart from localStorage
+        const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
+        
+        // Check if product already in cart
+        const existingItem = existingCart.find((item: { id: number }) => item.id === product.id);
+        
+        if (existingItem) {
+            // Increment quantity
+            existingItem.quantity = (existingItem.quantity || 1) + 1;
+        } else {
+            // Add new item
+            existingCart.push({
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                currency: product.currency,
+                image_url: product.image_url,
+                quantity: 1,
+            });
+        }
+        
+        // Save to localStorage
+        localStorage.setItem('cart', JSON.stringify(existingCart));
+        setAddedToCart(true);
+        
+        // Reset message after 2 seconds
+        setTimeout(() => setAddedToCart(false), 2000);
+    };
+
     return (
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-[0_10px_30px_-15px_rgba(0,0,0,0.6)] ring-1 ring-white/10 backdrop-blur transition hover:bg-white/[0.05]">
+        <Link
+            href={`/shop/${product.slug || product.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`}
+            className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-[0_10px_30px_-15px_rgba(0,0,0,0.6)] ring-1 ring-white/10 backdrop-blur transition hover:bg-white/[0.05]"
+        >
             <div className="flex aspect-video items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-900">
                 {product.image_url ? (
                     <img
                         src={product.image_url}
                         alt={product.name}
-                        className="h-full w-full object-cover"
+                        className="h-full w-full object-cover transition group-hover:scale-105"
                     />
                 ) : (
                     <div className="text-4xl opacity-30">📦</div>
@@ -75,35 +115,49 @@ function ProductCard({ product }: { product: Product }) {
             <div className="p-5">
                 {/* Title */}
                 <div className="mb-2">
-                    <h3 className="text-base leading-tight font-semibold">
+                    <h3 className="text-base leading-tight font-semibold text-white group-hover:text-red-400 transition">
                         {product.name}
                     </h3>
                 </div>
                 {/* Price + stock aligned left */}
                 <div className="mb-2 flex items-center gap-3 text-sm">
-                    <div className="font-medium">
+                    <div className="font-medium text-white">
                         {product.price} {product.currency}
                     </div>
-                    <div className="opacity-60">Stock: {product.stock_quantity}</div>
+                    <div className="opacity-60 text-gray-400">Stock: {product.stock_quantity}</div>
                 </div>
-                <p className="mb-3 line-clamp-2 text-xs opacity-70">
+                <p className="mb-3 line-clamp-2 text-xs opacity-70 text-gray-300">
                     {product.description}
                 </p>
-                <div className="mb-4 text-xs opacity-60">
+                <div className="mb-4 text-xs opacity-60 text-gray-400">
                     Category: {product.category}
                 </div>
-                <button
-                    disabled={!product.is_available}
-                    className={`w-full rounded-xl px-4 py-2.5 text-sm font-medium transition ${
-                        product.is_available
-                            ? 'bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400'
-                            : 'cursor-not-allowed bg-zinc-800 text-zinc-500'
-                    }`}
-                >
-                    {product.is_available ? 'Request Loan' : 'Unavailable'}
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={handleAddToCart}
+                        disabled={!product.is_available}
+                        className={`flex-1 flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition ${
+                            product.is_available
+                                ? 'bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400'
+                                : 'cursor-not-allowed bg-zinc-800 text-zinc-500'
+                        }`}
+                    >
+                        <ShoppingCart className="h-4 w-4" />
+                        {addedToCart ? 'Added!' : 'Add to Cart'}
+                    </button>
+                    <button
+                        disabled={!product.is_available}
+                        className={`rounded-xl px-4 py-2.5 text-sm font-medium transition ${
+                            product.is_available
+                                ? 'bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400'
+                                : 'cursor-not-allowed bg-zinc-800 text-zinc-500'
+                        }`}
+                    >
+                        {product.is_available ? 'Borrow' : 'Unavailable'}
+                    </button>
+                </div>
             </div>
-        </div>
+        </Link>
     );
 }
 
