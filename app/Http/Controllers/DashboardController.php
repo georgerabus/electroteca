@@ -41,23 +41,29 @@ class DashboardController extends Controller
             });
         }
 
-        $loanRequests = $query->get()->map(function ($request) {
-            return [
-                'id' => $request->request_id,
-                'status' => $request->status,
-                'product' => $request->product->name,
-                'requester' => [
-                    'name' => $request->user->name,
-                    'email' => $request->user->email,
-                ],
-                'period' => [
-                    'from' => $request->period_from->format('Y-m-d'),
-                    'to' => $request->period_to->format('Y-m-d'),
-                ],
-                'requestedAt' => $request->created_at->format('Y-m-d, H:i:s'),
-                'details' => $this->getDetailsString($request),
-            ];
-        });
+        $loanRequests = $query->get()
+            ->filter(function ($request) {
+                // Filter out loans with deleted products or users
+                return $request->product !== null && $request->user !== null;
+            })
+            ->map(function ($request) {
+                return [
+                    'id' => $request->request_id,
+                    'status' => $request->status,
+                    'product' => $request->product->name ?? 'Deleted Product',
+                    'requester' => [
+                        'name' => $request->user->name ?? 'Unknown User',
+                        'email' => $request->user->email ?? 'unknown@example.com',
+                    ],
+                    'period' => [
+                        'from' => $request->period_from->format('Y-m-d'),
+                        'to' => $request->period_to->format('Y-m-d'),
+                    ],
+                    'requestedAt' => $request->created_at->format('Y-m-d, H:i:s'),
+                    'details' => $this->getDetailsString($request),
+                ];
+            })
+            ->values();
 
         $products = Product::pluck('name')->unique()->values();
 
@@ -79,6 +85,8 @@ class DashboardController extends Controller
                 return $request->returned_at
                     ? "Defective · {$request->returned_at->format('Y-m-d, H:i:s')}"
                     : 'Defective';
+            case 'Return Requested':
+                return 'Return Requested · Waiting for approval';
             case 'Approved':
                 return $request->approved_at
                     ? "Approved · {$request->approved_at->format('Y-m-d, H:i:s')}"

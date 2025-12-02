@@ -1,9 +1,29 @@
 import AppLayout from '@/layouts/app-layout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useCart } from '@/hooks/use-cart';
+import { usePage } from '@inertiajs/react';
+import { type SharedData } from '@/types';
 
 export default function CartPage() {
+  const { auth } = usePage<SharedData>().props;
   const { cart, itemCount, totalPrice, removeFromCart, updateQuantity, clearCart } = useCart();
+
+  const handleCheckout = () => {
+    if (!auth.user) {
+      router.visit('/login');
+      return;
+    }
+
+    if (cart.length === 0) {
+      return;
+    }
+
+    // Pass cart data to checkout
+    router.visit('/checkout', {
+      data: { cart: JSON.stringify(cart) },
+      method: 'get',
+    });
+  };
 
   return (
     <AppLayout breadcrumbs={[{ title: 'Shop', href: '/shop' }, { title: 'Cart', href: '/cart' }] }>
@@ -54,8 +74,16 @@ export default function CartPage() {
               <button className="text-sm text-gray-400 underline" onClick={() => clearCart()}>Clear cart</button>
               <div className="text-xl font-bold text-white">Total: {totalPrice.toFixed(2)}</div>
             </div>
-            <button className="mt-8 w-full rounded-xl bg-red-600 px-8 py-4 font-semibold text-white text-lg ring-2 ring-red-600 cursor-not-allowed opacity-60" disabled>
-              Checkout (coming soon)
+            <button 
+              onClick={handleCheckout}
+              disabled={!auth.user || cart.length === 0}
+              className={`mt-8 w-full rounded-xl px-8 py-4 font-semibold text-white text-lg ring-2 transition ${
+                auth.user && cart.length > 0
+                  ? 'bg-red-600 ring-red-600 hover:bg-red-700 cursor-pointer'
+                  : 'bg-red-600 ring-red-600 cursor-not-allowed opacity-60'
+              }`}
+            >
+              {!auth.user ? 'Login to Checkout' : 'Proceed to Checkout'}
             </button>
           </>
         )}
@@ -63,3 +91,4 @@ export default function CartPage() {
     </AppLayout>
   );
 }
+

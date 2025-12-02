@@ -1,9 +1,11 @@
 import AppLayout from '@/layouts/app-layout';
 import { products } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
-import { ShoppingCart, ArrowLeft } from 'lucide-react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useState, useEffect } from 'react';
+import { ShoppingCart, ArrowLeft, Package, Calendar, DollarSign, AlertCircle } from 'lucide-react';
+import { useCart } from '@/hooks/use-cart';
+import { type SharedData } from '@/types';
 
 type Product = {
     id: number;
@@ -23,7 +25,20 @@ type ProductShowPageProps = {
 };
 
 export default function ProductShow({ product }: ProductShowPageProps) {
+    const { auth } = usePage<SharedData>().props;
     const [addedToCart, setAddedToCart] = useState(false);
+    const [borrowInfo, setBorrowInfo] = useState<{
+        can_borrow: boolean;
+        deposit_required: number;
+        reasons: string[];
+    } | null>(null);
+    const [isCheckingBorrow, setIsCheckingBorrow] = useState(false);
+    const [isBorrowing, setIsBorrowing] = useState(false);
+    const [showBorrowForm, setShowBorrowForm] = useState(false);
+    const [borrowPeriodFrom, setBorrowPeriodFrom] = useState('');
+    const [borrowPeriodTo, setBorrowPeriodTo] = useState('');
+    const [borrowDetails, setBorrowDetails] = useState('');
+    const { addToCart } = useCart();
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Shop', href: products().url },
@@ -31,34 +46,93 @@ export default function ProductShow({ product }: ProductShowPageProps) {
         { title: product.name, href: `/shop/${product.slug}` },
     ];
 
+    // Check borrowability when component mounts or product changes
+    useEffect(() => {
+        if (auth.user && product.is_available) {
+            checkBorrowability();
+        }
+    }, [product.id, auth.user?.wallet_balance]);
+
+    const checkBorrowability = async () => {
+        if (!auth.user) return;
+        
+        setIsCheckingBorrow(true);
+        try {
+            const response = await fetch(`/products/${product.id}/check-borrow`);
+            const data = await response.json();
+            setBorrowInfo(data);
+        } catch (error) {
+            console.error('Error checking borrowability:', error);
+        } finally {
+            setIsCheckingBorrow(false);
+        }
+    };
+
     const handleAddToCart = () => {
-        // Get existing cart from localStorage
-        const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
-        
-        // Check if product already in cart
-        const existingItem = existingCart.find((item: { id: number }) => item.id === product.id);
-        
-        if (existingItem) {
-            // Increment quantity
-            existingItem.quantity = (existingItem.quantity || 1) + 1;
-        } else {
-            // Add new item
-            existingCart.push({
+        addToCart(
+            {
                 id: product.id,
                 name: product.name,
                 price: product.price,
                 currency: product.currency,
                 image_url: product.image_url,
-                quantity: 1,
-            });
-        }
-        
-        // Save to localStorage
-        localStorage.setItem('cart', JSON.stringify(existingCart));
+            },
+            1,
+        );
         setAddedToCart(true);
         
         // Reset message after 2 seconds
         setTimeout(() => setAddedToCart(false), 2000);
+    };
+
+    const handleBorrow = () => {
+        if (!auth.user) {
+            router.visit('/login');
+            return;
+        }
+
+        if (!borrowInfo?.can_borrow) {
+            alert(borrowInfo?.reasons.join('\n') || 'Cannot borrow this product');
+            return;
+        }
+
+        setShowBorrowForm(true);
+    };
+
+    const submitBorrow = () => {
+        if (!borrowPeriodFrom || !borrowPeriodTo) {
+            alert('Please select both start and end dates');
+            return;
+        }
+
+        const fromDate = new Date(borrowPeriodFrom);
+        const toDate = new Date(borrowPeriodTo);
+
+        if (toDate <= fromDate) {
+            alert('End date must be after start date');
+            return;
+        }
+
+        setIsBorrowing(true);
+        router.post(`/products/${product.id}/borrow`, {
+            period_from: borrowPeriodFrom,
+            period_to: borrowPeriodTo,
+            details: borrowDetails,
+        }, {
+            onSuccess: () => {
+                setShowBorrowForm(false);
+                setBorrowPeriodFrom('');
+                setBorrowPeriodTo('');
+                setBorrowDetails('');
+                checkBorrowability(); // Refresh borrow info
+            },
+            onError: (errors) => {
+                console.error('Borrow error:', errors);
+            },
+            onFinish: () => {
+                setIsBorrowing(false);
+            },
+        });
     };
 
     return (
@@ -133,21 +207,122 @@ export default function ProductShow({ product }: ProductShowPageProps) {
                                 {addedToCart ? 'Added to Cart!' : 'Add to Cart'}
                             </button>
 
-                            <button
-                                disabled={!product.is_available}
-                                className={`rounded-xl border-2 px-6 py-4 text-base font-semibold transition ${
-                                    product.is_available
-                                        ? 'border-white/20 bg-transparent text-white hover:bg-white/5'
-                                        : 'cursor-not-allowed border-zinc-700 bg-transparent text-zinc-500'
-                                }`}
-                            >
-                                Compare
-                            </button>
+                            {auth.user ? (
+                                <>
+                                    {borrowInfo && (
+                                        <div className="mb-3 rounded-lg border border-white/10 bg-white/5 p-3">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-sm text-gray-400">Deposit Required:</span>
+                                                <span className="text-sm font-semibold text-white">
+                                                    {borrowInfo.deposit_required.toFixed(2)} CR
+                                                </span>
+                                            </div>
+                                            {!borrowInfo.can_borrow && (
+                                                <div className="flex items-start gap-2 text-xs text-red-400 mt-2">
+                                                    <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                                    <div>
+                                                        {borrowInfo.reasons.map((reason, idx) => (
+                                                            <div key={idx}>{reason}</div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    <button
+                                        onClick={handleBorrow}
+                                        disabled={!product.is_available || isCheckingBorrow || (borrowInfo && !borrowInfo.can_borrow)}
+                                        className={`flex items-center justify-center gap-2 rounded-xl border-2 px-6 py-4 text-base font-semibold transition ${
+                                            product.is_available && borrowInfo?.can_borrow
+                                                ? 'border-blue-500/50 bg-transparent text-blue-400 hover:bg-blue-500/10'
+                                                : 'cursor-not-allowed border-zinc-700 bg-transparent text-zinc-500'
+                                        }`}
+                                    >
+                                        <Package className="h-5 w-5" />
+                                        {isCheckingBorrow ? 'Checking...' : 'Borrow'}
+                                    </button>
+                                </>
+                            ) : (
+                                <Link
+                                    href="/login"
+                                    className="flex items-center justify-center gap-2 rounded-xl border-2 border-white/20 bg-transparent text-white hover:bg-white/5 px-6 py-4 text-base font-semibold transition"
+                                >
+                                    <Package className="h-5 w-5" />
+                                    Login to Borrow
+                                </Link>
+                            )}
                         </div>
 
                         {addedToCart && (
                             <div className="mt-4 rounded-lg bg-green-500/20 border border-green-500/50 p-3 text-sm text-green-400">
-                                Product added! Compare
+                                Product added to cart!
+                            </div>
+                        )}
+
+                        {/* Borrow Form Modal */}
+                        {showBorrowForm && (
+                            <div className="mt-4 rounded-lg border border-white/10 bg-zinc-900/50 p-4">
+                                <h3 className="text-lg font-semibold text-white mb-4">Borrow Product</h3>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm text-gray-300 mb-1">
+                                            <Calendar className="inline h-4 w-4 mr-1" />
+                                            Start Date
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={borrowPeriodFrom}
+                                            onChange={(e) => setBorrowPeriodFrom(e.target.value)}
+                                            min={new Date().toISOString().split('T')[0]}
+                                            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-white/20 focus:outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-gray-300 mb-1">
+                                            <Calendar className="inline h-4 w-4 mr-1" />
+                                            End Date
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={borrowPeriodTo}
+                                            onChange={(e) => setBorrowPeriodTo(e.target.value)}
+                                            min={borrowPeriodFrom || new Date().toISOString().split('T')[0]}
+                                            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-white/20 focus:outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-gray-300 mb-1">
+                                            Details (optional)
+                                        </label>
+                                        <textarea
+                                            value={borrowDetails}
+                                            onChange={(e) => setBorrowDetails(e.target.value)}
+                                            placeholder="Any additional information..."
+                                            rows={3}
+                                            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-white/20 focus:outline-none"
+                                        />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={submitBorrow}
+                                            disabled={isBorrowing}
+                                            className="flex-1 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50"
+                                        >
+                                            {isBorrowing ? 'Processing...' : 'Submit Request'}
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setShowBorrowForm(false);
+                                                setBorrowPeriodFrom('');
+                                                setBorrowPeriodTo('');
+                                                setBorrowDetails('');
+                                            }}
+                                            className="rounded-xl border border-white/20 bg-transparent px-4 py-2 text-sm font-semibold text-white hover:bg-white/5 transition"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -156,4 +331,5 @@ export default function ProductShow({ product }: ProductShowPageProps) {
         </AppLayout>
     );
 }
+
 

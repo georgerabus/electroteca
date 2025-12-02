@@ -32,7 +32,7 @@ import { cn } from '@/lib/utils';
 import { dashboard, products } from '@/routes';
 import { type BreadcrumbItem, type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Menu, Search, ShoppingCart } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Menu, Search, ShoppingCart, Package, Wallet } from 'lucide-react';
 import AppLogo from './app-logo';
 import AppLogoIcon from './app-logo-icon';
 import { useCart } from '@/hooks/use-cart';
@@ -57,8 +57,26 @@ const mainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
+        title: 'My Loans',
+        href: '/loans/my-loans',
+        icon: Package,
+    },
+    {
+        title: 'Wallet',
+        href: '/wallet',
+        icon: Wallet,
+    },
+    {
         title: 'Contact',
         href: '/contact',
+    },
+];
+
+const adminNavItems: NavItem[] = [
+    {
+        title: 'Admin Panel',
+        href: '/admin',
+        icon: LayoutGrid,
     },
 ];
 
@@ -131,6 +149,26 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                                     <span>{item.title}</span>
                                                 </Link>
                                             ))}
+                                            {auth.user?.admin && (
+                                                <>
+                                                    <div className="my-2 border-t border-white/10"></div>
+                                                    {adminNavItems.map((item) => (
+                                                        <Link
+                                                            key={item.title}
+                                                            href={item.href}
+                                                            className="flex items-center space-x-2 font-medium text-red-400"
+                                                        >
+                                                            {item.icon && (
+                                                                <Icon
+                                                                    iconNode={item.icon}
+                                                                    className="h-5 w-5"
+                                                                />
+                                                            )}
+                                                            <span>{item.title}</span>
+                                                        </Link>
+                                                    ))}
+                                                </>
+                                            )}
                                         </div>
 
                                         {/* Removed rightNavItems from mobile navigation */}
@@ -195,11 +233,53 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                         )}
                                     </NavigationMenuItem>
                                 ))}
+                                {auth.user?.admin && adminNavItems.map((item, index) => (
+                                    <NavigationMenuItem
+                                        key={`admin-${index}`}
+                                        className="relative flex h-full items-center"
+                                    >
+                                        <Link
+                                            href={item.href}
+                                            className={cn(
+                                                navigationMenuTriggerStyle(),
+                                                page.url ===
+                                                    (typeof item.href ===
+                                                    'string'
+                                                        ? item.href
+                                                        : item.href.url) &&
+                                                    activeItemStyles,
+                                                'h-9 cursor-pointer px-3 border-l border-white/10 ml-2 pl-4',
+                                            )}
+                                        >
+                                            {item.icon && (
+                                                <Icon
+                                                    iconNode={item.icon}
+                                                    className="mr-2 h-4 w-4"
+                                                />
+                                            )}
+                                            {item.title}
+                                        </Link>
+                                        {page.url === item.href && (
+                                            <div className="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-black dark:bg-white"></div>
+                                        )}
+                                    </NavigationMenuItem>
+                                ))}
                             </NavigationMenuList>
                         </NavigationMenu>
                     </div>
 
-                    <div className="ml-auto flex items-center space-x-2">
+                    <div className="ml-auto flex items-center space-x-3">
+                        {auth.user && (
+                            <div className="hidden text-sm text-gray-300 md:block">
+                                <span className="opacity-70 mr-1">Balance:</span>
+                                <span className="font-semibold text-white">
+                                    {auth.user.wallet_balance?.toFixed
+                                        ? auth.user.wallet_balance.toFixed(2)
+                                        : Number(auth.user.wallet_balance ?? 0).toFixed(2)}{' '}
+                                    CR
+                                </span>
+                            </div>
+                        )}
                         <div className="relative flex items-center space-x-1">
                             {/* Cart Icon */}
                             <Link href="/cart" className="relative flex items-center justify-center group rounded hover:bg-white/10 transition p-1">

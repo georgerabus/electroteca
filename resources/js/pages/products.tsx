@@ -4,6 +4,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import { ChangeEvent, useMemo, useState } from 'react';
 import { ShoppingCart } from 'lucide-react';
+import { useCart } from '@/hooks/use-cart';
 
 type Product = {
     id: number;
@@ -62,34 +63,22 @@ function ToolbarSelect(
 
 function ProductCard({ product }: { product: Product }) {
     const [addedToCart, setAddedToCart] = useState(false);
+    const { addToCart } = useCart();
 
     const handleAddToCart = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
         
-        // Get existing cart from localStorage
-        const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
-        
-        // Check if product already in cart
-        const existingItem = existingCart.find((item: { id: number }) => item.id === product.id);
-        
-        if (existingItem) {
-            // Increment quantity
-            existingItem.quantity = (existingItem.quantity || 1) + 1;
-        } else {
-            // Add new item
-            existingCart.push({
+        addToCart(
+            {
                 id: product.id,
                 name: product.name,
                 price: product.price,
                 currency: product.currency,
                 image_url: product.image_url,
-                quantity: 1,
-            });
-        }
-        
-        // Save to localStorage
-        localStorage.setItem('cart', JSON.stringify(existingCart));
+            },
+            1,
+        );
         setAddedToCart(true);
         
         // Reset message after 2 seconds

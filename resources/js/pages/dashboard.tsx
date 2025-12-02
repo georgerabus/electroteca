@@ -1,8 +1,8 @@
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
-import { ChangeEvent, useMemo, useState } from 'react';
+import { Head, router } from '@inertiajs/react';
+import { ChangeEvent, useMemo, useState, useEffect } from 'react';
 
 type Status =
     | 'Requested'
@@ -28,36 +28,15 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: dashboard().url },
 ];
 
-// ---------- dummy rows (frontend-only) ----------
-const ALL_ROWS: Row[] = [
-    {
-        id: 'R-101',
-        status: 'Picked up',
-        product: 'Jumper Wires',
-        requester: { name: 'Mihai T.', email: 'mihai.traian@utm.md' },
-        period: { from: '2025-09-03', to: '2025-09-10' },
-        requestedAt: '2025-09-03, 14:10:00',
-        details: '—',
-    },
-    {
-        id: 'R-1002',
-        status: 'Returned',
-        product: 'Electronic Cable',
-        requester: { name: 'Ana Popescu', email: 'ana.popescu@utm.md' },
-        period: { from: '2025-09-02', to: '2025-09-09' },
-        requestedAt: '2025-09-02, 15:30:00',
-        details: 'Returned · 2025-09-09, 18:05:00',
-    },
-    {
-        id: 'R-1003',
-        status: 'Defective',
-        product: '4-in-1 Breadboard',
-        requester: { name: 'Ion Marin', email: 'ion.marin@utm.md' },
-        period: { from: '2025-09-01', to: '2025-09-07' },
-        requestedAt: '2025-09-01, 13:00:00',
-        details: 'Defective · 2025-09-05, 16:00:00',
-    },
-];
+type DashboardPageProps = {
+    loanRequests: Row[];
+    products: string[];
+    filters?: {
+        status?: string;
+        product?: string;
+        search?: string;
+    };
+};
 
 // Make options `as const`, then derive their union types
 const STATUS_OPTIONS = [
@@ -73,21 +52,7 @@ const STATUS_OPTIONS = [
 ] as const;
 type StatusOption = (typeof STATUS_OPTIONS)[number];
 
-const PRODUCT_OPTIONS = [
-    'All products',
-    '4-in-1 Breadboard',
-    'Electronic Cable',
-    'Connecting Cables',
-    'Solder Paste',
-    'Unloaded circuit board',
-    'ESP32 Expansion Board',
-    'PCB Test Board',
-    'Double Sided PCB Protoboard Boards',
-    'Precision Screwdriver Set',
-    'Nylon Soldering Station clamp holder',
-    'Heat-Shrink Tubes',
-] as const;
-type ProductOption = (typeof PRODUCT_OPTIONS)[number];
+type ProductOption = string;
 
 // ---------- small UI helpers ----------
 const statusTone: Record<Status, string> = {
@@ -96,6 +61,7 @@ const statusTone: Record<Status, string> = {
     Rejected: 'text-rose-300 bg-rose-300/10 ring-1 ring-rose-300/20',
     'Picked up': 'text-blue-300 bg-blue-300/10 ring-1 ring-blue-300/20',
     Approved: 'text-sky-300 bg-sky-300/10 ring-1 ring-sky-300/20',
+    'Return Requested': 'text-orange-300 bg-orange-300/10 ring-1 ring-orange-300/20',
     Late: 'text-amber-300 bg-amber-300/10 ring-1 ring-amber-300/20',
     Requested: 'text-zinc-300 bg-zinc-300/10 ring-1 ring-zinc-300/20',
     Cancelled: 'text-zinc-400 bg-zinc-400/10 ring-1 ring-zinc-400/20',
@@ -137,10 +103,10 @@ function ToolbarSelect(
 }
 
 // ---------- page ----------
-export default function Dashboard() {
-    const [status, setStatus] = useState<StatusOption>('All');
-    const [product, setProduct] = useState<ProductOption>('All products');
-    const [query, setQuery] = useState('');
+export default function Dashboard({ loanRequests, products, filters }: DashboardPageProps) {
+    const [status, setStatus] = useState<StatusOption>((filters?.status as StatusOption) || 'All');
+    const [product, setProduct] = useState<ProductOption>(filters?.product || 'All products');
+    const [query, setQuery] = useState(filters?.search || '');
 
     // Typed handlers (no `any`)
     const onStatusChange = (e: ChangeEvent<HTMLSelectElement>) => {
@@ -148,12 +114,25 @@ export default function Dashboard() {
         setStatus(val);
     };
     const onProductChange = (e: ChangeEvent<HTMLSelectElement>) => {
-        const val =
-            PRODUCT_OPTIONS.find((p) => p === e.target.value) ?? 'All products';
-        setProduct(val);
+        setProduct(e.target.value);
     };
 
-    const rows = ALL_ROWS;
+    // Update URL when filters change
+    useEffect(() => {
+        const params: Record<string, string> = {};
+        if (status !== 'All') params.status = status;
+        if (product !== 'All products') params.product = product;
+        if (query) params.search = query;
+
+        router.get(dashboard().url, params, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        });
+    }, [status, product, query]);
+
+    // Use loanRequests directly from backend (already filtered)
+    const rows = loanRequests;
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
@@ -180,7 +159,8 @@ export default function Dashboard() {
                     </ToolbarSelect>
 
                     <ToolbarSelect value={product} onChange={onProductChange}>
-                        {PRODUCT_OPTIONS.map((p) => (
+                        <option value="All products" className="bg-zinc-900">All products</option>
+                        {products.map((p) => (
                             <option key={p} value={p} className="bg-zinc-900">
                                 {p}
                             </option>

@@ -25,13 +25,21 @@ export default function AdminUsers({ users }: UsersPageProps) {
             <Head title="Admin - Users" />
 
             <div className="mx-auto max-w-7xl p-4 md:p-6">
-                <div className="mb-6">
-                    <h1 className="text-2xl font-semibold tracking-tight">
-                        Users Management
-                    </h1>
-                    <p className="text-sm text-muted-foreground">
-                        Manage system users
-                    </p>
+                <div className="mb-6 flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-semibold tracking-tight">
+                            Users Management
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            Manage system users
+                        </p>
+                    </div>
+                    <Link
+                        href="/admin/loans"
+                        className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition"
+                    >
+                        View All Loans
+                    </Link>
                 </div>
 
                 <div className="rounded-lg border bg-card">

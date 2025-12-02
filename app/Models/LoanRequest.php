@@ -21,6 +21,9 @@ class LoanRequest extends Model
         'approved_at',
         'picked_up_at',
         'returned_at',
+        'deposit_amount',
+        'damage_fee',
+        'refund_amount',
     ];
 
     protected $casts = [
@@ -29,6 +32,9 @@ class LoanRequest extends Model
         'approved_at' => 'datetime',
         'picked_up_at' => 'datetime',
         'returned_at' => 'datetime',
+        'deposit_amount' => 'decimal:2',
+        'damage_fee' => 'decimal:2',
+        'refund_amount' => 'decimal:2',
     ];
 
     public function product(): BelongsTo
