@@ -32,7 +32,7 @@ import { cn } from '@/lib/utils';
 import { dashboard, products } from '@/routes';
 import { type BreadcrumbItem, type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Menu, Search, ShoppingCart, Package, Wallet } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Menu, Search, ShoppingCart, Package, Wallet, UserCircle2 } from 'lucide-react';
 import AppLogo from './app-logo';
 import AppLogoIcon from './app-logo-icon';
 import { useCart } from '@/hooks/use-cart';
@@ -103,8 +103,10 @@ interface AppHeaderProps {
 export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
     const page = usePage<SharedData>();
     const { auth } = page.props;
+    const authUser = auth?.user ?? null;
     const getInitials = useInitials();
     const { itemCount } = useCart();
+    
     return (
         <>
             <div className="border-b border-sidebar-border/80">
@@ -149,7 +151,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                                     <span>{item.title}</span>
                                                 </Link>
                                             ))}
-                                            {auth.user?.admin && (
+                                            {authUser?.admin && (
                                                 <>
                                                     <div className="my-2 border-t border-white/10"></div>
                                                     {adminNavItems.map((item) => (
@@ -233,7 +235,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                         )}
                                     </NavigationMenuItem>
                                 ))}
-                                {auth.user?.admin && adminNavItems.map((item, index) => (
+                                {authUser?.admin && adminNavItems.map((item, index) => (
                                     <NavigationMenuItem
                                         key={`admin-${index}`}
                                         className="relative flex h-full items-center"
@@ -269,13 +271,13 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                     </div>
 
                     <div className="ml-auto flex items-center space-x-3">
-                        {auth.user && (
+                        {authUser && (
                             <div className="hidden text-sm text-gray-300 md:block">
                                 <span className="opacity-70 mr-1">Balance:</span>
                                 <span className="font-semibold text-white">
-                                    {auth.user.wallet_balance?.toFixed
-                                        ? auth.user.wallet_balance.toFixed(2)
-                                        : Number(auth.user.wallet_balance ?? 0).toFixed(2)}{' '}
+                                    {authUser.wallet_balance?.toFixed
+                                        ? authUser.wallet_balance.toFixed(2)
+                                        : Number(authUser.wallet_balance ?? 0).toFixed(2)}{' '}
                                     CR
                                 </span>
                             </div>
@@ -297,29 +299,39 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                             </Button>
                             {/* Removed rightNavItems from desktop navigation */}
                         </div>
-                        {auth.user && (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
+                        
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                {authUser ? (
+                                    // Authenticated
                                     <Button
                                         variant="ghost"
                                         className="size-10 rounded-full p-1"
                                     >
                                         <Avatar className="size-8 overflow-hidden rounded-full">
                                             <AvatarImage
-                                                src={auth.user.avatar}
-                                                alt={auth.user.name}
+                                                src={authUser.avatar}
+                                                alt={authUser.name}
                                             />
                                             <AvatarFallback className="rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
-                                                {getInitials(auth.user.name)}
+                                                {getInitials(authUser.name)}
                                             </AvatarFallback>
                                         </Avatar>
                                     </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent className="w-56" align="end">
-                                    <UserMenuContent user={auth.user} />
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        )}
+                                ) : (
+                                    // Guest
+                                    <Button
+                                        variant="ghost"
+                                        className="size-10 rounded-full p-1"
+                                    >
+                                        <UserCircle2 className="h-8 w-8 text-neutral-800 dark:text-neutral-100" />
+                                    </Button>
+                                )}
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-56" align="end">
+                                <UserMenuContent user={authUser} />
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
             </div>

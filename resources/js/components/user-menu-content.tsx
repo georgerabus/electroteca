@@ -10,10 +10,10 @@ import { logout } from '@/routes';
 import { edit } from '@/routes/profile';
 import { type User } from '@/types';
 import { Link, router } from '@inertiajs/react';
-import { LogOut, Settings } from 'lucide-react';
+import { LogOut, Settings, LogIn, UserPlus } from 'lucide-react';
 
 interface UserMenuContentProps {
-    user: User;
+    user?: User | null;
 }
 
 export function UserMenuContent({ user }: UserMenuContentProps) {
@@ -24,6 +24,48 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
         router.flushAll();
     };
 
+    // Guest menu
+    if (!user) {
+        return (
+            <>
+                <DropdownMenuLabel className="p-0 font-normal">
+                    <div className="flex flex-col gap-0.5 px-1 py-1.5 text-left text-sm">
+                        <span className="font-medium">Account</span>
+                        <span className="text-xs text-muted-foreground">
+                            Sign in to access your profile
+                        </span>
+                    </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                    <DropdownMenuItem asChild>
+                        <Link
+                            href="/login"
+                            className="flex w-full items-center"
+                            onClick={cleanup}
+                            prefetch
+                        >
+                            <LogIn className="mr-2" />
+                            Login
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <Link
+                            href="/register"
+                            className="flex w-full items-center"
+                            onClick={cleanup}
+                            prefetch
+                        >
+                            <UserPlus className="mr-2" />
+                            Register
+                        </Link>
+                    </DropdownMenuItem>
+                </DropdownMenuGroup>
+            </>
+        );
+    }
+
+    // Authenticated user menu
     return (
         <>
             <DropdownMenuLabel className="p-0 font-normal">
