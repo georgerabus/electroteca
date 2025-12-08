@@ -2,12 +2,15 @@
 
 namespace App\Providers;
 
+use App\Http\Responses\LogoutResponse;
+use App\Services\EmailTwoFactorService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Laravel\Fortify\Contracts\LogoutResponse as LogoutResponseContract;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 
@@ -18,7 +21,8 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Register custom logout response to clear JWT cookies
+        $this->app->singleton(LogoutResponseContract::class, LogoutResponse::class);
     }
 
     /**
@@ -28,6 +32,7 @@ class FortifyServiceProvider extends ServiceProvider
     {
         $this->configureViews();
         $this->configureRateLimiting();
+        $this->configureEmailTwoFactor();
     }
 
     /**
@@ -44,7 +49,7 @@ class FortifyServiceProvider extends ServiceProvider
             'status' => $request->session()->get('status'),
         ]));
 
-        Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/two-factor-challenge'));
+        // twoFactorChallengeView is configured in configureEmailTwoFactor()
 
         Fortify::confirmPasswordView(fn () => Inertia::render('auth/confirm-password'));
     }
@@ -62,6 +67,36 @@ class FortifyServiceProvider extends ServiceProvider
             $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
 
             return Limit::perMinute(5)->by($throttleKey);
+        });
+    }
+
+    /**
+     * Configure email-based two-factor authentication.
+     */
+    private function configureEmailTwoFactor(): void
+    {
+        // Custom 2FA challenge view - handled by TwoFactorChallengeController
+        // This sends email OTP when the challenge page is accessed
+        Fortify::twoFactorChallengeView(function (Request $request) {
+            $loginId = $request->session()->get('login.id');
+            
+            if (!$loginId) {
+                return redirect()->route('login');
+            }
+
+            $user = \App\Models\User::find($loginId);
+            
+            if (!$user || !$user->hasEnabledTwoFactorAuthentication()) {
+                return redirect()->route('login');
+            }
+
+            // Send email OTP
+            $emailTwoFactorService = app(EmailTwoFactorService::class);
+            $emailTwoFactorService->sendOtp($user);
+
+            return Inertia::render('auth/two-factor-challenge', [
+                'emailOtpSent' => true,
+            ]);
         });
     }
 }

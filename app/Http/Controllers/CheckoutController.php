@@ -65,11 +65,18 @@ class CheckoutController extends Controller
             $totalDeposit = 0;
             $errors = [];
 
-            // Process each cart item as a loan request
+            // First pass: Validate all items and calculate total deposit
             foreach ($cart as $item) {
                 $product = Product::findOrFail($item['id']);
+                $quantity = (int) $item['quantity'];
 
-                // Check if user can borrow
+                // Check stock availability
+                if ($product->stock_quantity < $quantity) {
+                    $errors[] = "{$product->name}: Insufficient stock. Available: {$product->stock_quantity}, Requested: {$quantity}";
+                    continue;
+                }
+
+                // Check if user can borrow (for each item)
                 $check = $this->loanService->canBorrow($user, $product);
                 
                 if (!$check['can_borrow']) {
@@ -77,32 +84,52 @@ class CheckoutController extends Controller
                     continue;
                 }
 
-                // Calculate deposit for this product
+                // Calculate deposit for this product (multiply by quantity)
                 $deposit = $this->loanService->calculateDeposit($product);
-                $totalDeposit += $deposit;
+                $totalDeposit += ($deposit * $quantity);
+            }
 
-                // Create loan request (automatically approved)
-                try {
-                    $loanRequest = $this->loanService->borrowProduct(
-                        $user,
-                        $product,
-                        $periodFrom,
-                        $periodTo,
-                        null
-                    );
-                    
-                    $loanRequests[] = $loanRequest;
-                } catch (\Exception $e) {
-                    $errors[] = "{$product->name}: {$e->getMessage()}";
+            // Validate total wallet balance before processing
+            if ($user->wallet_balance < $totalDeposit) {
+                return back()->withErrors([
+                    'wallet' => "Insufficient wallet balance. Required: " . number_format($totalDeposit, 2) . " CR, Available: " . number_format($user->wallet_balance, 2) . " CR"
+                ])->withInput();
+            }
+
+            // If there are validation errors, return early
+            if (!empty($errors)) {
+                return back()->withErrors(['cart' => $errors])->withInput();
+            }
+
+            // Second pass: Create loan requests (one per quantity)
+            foreach ($cart as $item) {
+                $product = Product::findOrFail($item['id']);
+                $quantity = (int) $item['quantity'];
+
+                // Create multiple loan requests based on quantity
+                for ($i = 0; $i < $quantity; $i++) {
+                    try {
+                        $loanRequest = $this->loanService->borrowProduct(
+                            $user,
+                            $product,
+                            $periodFrom,
+                            $periodTo,
+                            null
+                        );
+                        
+                        $loanRequests[] = $loanRequest;
+                    } catch (\Exception $e) {
+                        $errors[] = "{$product->name} (item " . ($i + 1) . "): {$e->getMessage()}";
+                    }
                 }
             }
 
             if (!empty($errors)) {
-                return back()->withErrors(['cart' => $errors]);
+                return back()->withErrors(['cart' => $errors])->withInput();
             }
 
             if (empty($loanRequests)) {
-                return back()->withErrors(['cart' => 'No items could be borrowed']);
+                return back()->withErrors(['cart' => 'No items could be borrowed'])->withInput();
             }
 
             return redirect()->route('loans.my-loans')->with('success', 

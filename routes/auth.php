@@ -30,4 +30,13 @@ Route::middleware('guest')->group(function () {
 
     Route::get('auth/{provider}/callback', [\App\Http\Controllers\Auth\SocialAuthController::class, 'callback'])
         ->name('social.callback');
+
+    // Custom two-factor challenge routes (supports email OTP)
+    // These override Fortify's default 2FA routes to add email OTP support
+    Route::get('two-factor-challenge', [\App\Http\Controllers\Auth\TwoFactorChallengeController::class, 'create'])
+        ->name('two-factor.login');
+
+    Route::post('two-factor-challenge', [\App\Http\Controllers\Auth\TwoFactorChallengeController::class, 'store'])
+        ->middleware('throttle:two-factor')
+        ->name('two-factor.login.store');
 });

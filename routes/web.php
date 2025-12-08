@@ -46,7 +46,7 @@ Route::get('/contact', function () {
     return Inertia::render('contact');
 })->name('contact');
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'require.2fa'])->group(function () {
     // Loan routes (accessible without email verification)
     Route::get('loans/my-loans', [LoanController::class, 'myLoans'])->name('loans.my-loans');
     Route::get('products/{product}/check-borrow', [LoanController::class, 'checkBorrowability'])->name('products.check-borrow');
@@ -62,7 +62,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('wallet', [WalletController::class, 'index'])->name('wallet');
 });
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'require.2fa'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
@@ -70,6 +70,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('users', [AdminController::class, 'users'])->name('users');
             Route::get('users/{user}/dashboard', [AdminController::class, 'userDashboard'])->name('user.dashboard');
             Route::get('loans', [AdminController::class, 'loans'])->name('loans');
+            
+            // Product management
+            Route::post('products', [AdminController::class, 'storeProduct'])->name('products.store');
+            Route::put('products/{product}', [AdminController::class, 'updateProduct'])->name('products.update');
+            Route::patch('products/{product}/stock', [AdminController::class, 'updateStock'])->name('products.update-stock');
             
             // Loan actions
             Route::post('loans/{loanRequest}/approve', [AdminController::class, 'approveLoan'])->name('loans.approve');

@@ -27,13 +27,72 @@ class AdminController extends Controller
                 'stock_quantity' => $product->stock_quantity,
                 'is_available' => $product->is_available,
                 'category' => $product->category->name,
+                'category_id' => $product->category_id,
                 'image_url' => $product->image_url,
+            ];
+        });
+
+        $categories = \App\Models\Category::all()->map(function ($category) {
+            return [
+                'id' => $category->id,
+                'name' => $category->name,
+                'slug' => $category->slug,
             ];
         });
 
         return Inertia::render('admin/products', [
             'products' => $products,
+            'categories' => $categories,
         ]);
+    }
+
+    public function storeProduct(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'slug' => ['required', 'string', 'max:255', 'unique:products,slug'],
+            'description' => ['nullable', 'string'],
+            'price' => ['required', 'numeric', 'min:0'],
+            'currency' => ['required', 'string', 'size:3'],
+            'stock_quantity' => ['required', 'integer', 'min:0'],
+            'is_available' => ['boolean'],
+            'image_url' => ['nullable', 'url'],
+            'category_id' => ['required', 'exists:categories,id'],
+        ]);
+
+        $product = Product::create($validated);
+
+        return back()->with('success', 'Product created successfully!');
+    }
+
+    public function updateProduct(Request $request, Product $product)
+    {
+        $validated = $request->validate([
+            'name' => ['sometimes', 'string', 'max:255'],
+            'slug' => ['sometimes', 'string', 'max:255', 'unique:products,slug,' . $product->id],
+            'description' => ['nullable', 'string'],
+            'price' => ['sometimes', 'numeric', 'min:0'],
+            'currency' => ['sometimes', 'string', 'size:3'],
+            'stock_quantity' => ['sometimes', 'integer', 'min:0'],
+            'is_available' => ['sometimes', 'boolean'],
+            'image_url' => ['nullable', 'url'],
+            'category_id' => ['sometimes', 'exists:categories,id'],
+        ]);
+
+        $product->update($validated);
+
+        return back()->with('success', 'Product updated successfully!');
+    }
+
+    public function updateStock(Request $request, Product $product)
+    {
+        $validated = $request->validate([
+            'stock_quantity' => ['required', 'integer', 'min:0'],
+        ]);
+
+        $product->update(['stock_quantity' => $validated['stock_quantity']]);
+
+        return back()->with('success', 'Stock quantity updated successfully!');
     }
 
     public function users()

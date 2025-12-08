@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+    <!-- OWASP ZAP Configuration for Electroteca Security Testing -->
+    
+    <!-- Scan Policies -->
+    <policies>
+        <!-- High Priority Vulnerabilities -->
+        <policy name="High">
+            <scanner level="HIGH"/>
+            <passiveScanner level="HIGH"/>
+        </policy>
+        
+        <!-- Medium Priority Vulnerabilities -->
+        <policy name="Medium">
+            <scanner level="MEDIUM"/>
+            <passiveScanner level="MEDIUM"/>
+        </policy>
+        
+        <!-- Low Priority Vulnerabilities -->
+        <policy name="Low">
+            <scanner level="LOW"/>
+            <passiveScanner level="LOW"/>
+        </policy>
+    </policies>
+    
+    <!-- Context Configuration -->
+    <contexts>
+        <context name="Electroteca">
+            <urls>
+                <url>http://localhost:8000</url>
+                <url>https://localhost:8000</url>
+            </urls>
+        </context>
+    </contexts>
+    
+    <!-- Authentication Configuration -->
+    <authentication>
+        <method>form</method>
+        <loginUrl>http://localhost:8000/login</loginUrl>
+        <usernameField>email</usernameField>
+        <passwordField>password</passwordField>
+    </authentication>
+    
+    <!-- Session Management -->
+    <sessionManagement>
+        <method>cookie</method>
+    </sessionManagement>
+    
+    <!-- Excluded URLs (static assets, etc.) -->
+    <excludedUrls>
+        <url>.*\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)</url>
+    </excludedUrls>
+</config>

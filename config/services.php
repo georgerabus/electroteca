@@ -53,4 +53,19 @@ return [
         'redirect' => env('APPLE_REDIRECT_URI', env('APP_URL') . '/auth/apple/callback'),
     ],
 
+    'microsoft' => [
+        'client_id' => env('MICROSOFT_CLIENT_ID'),
+        'client_secret' => env('MICROSOFT_CLIENT_SECRET'),
+        'redirect' => env('MICROSOFT_REDIRECT_URI', env('APP_URL') . '/auth/microsoft/callback'),
+        'tenant' => env('MICROSOFT_TENANT_ID', 'common'), // 'common', 'organizations', 'consumers', or tenant ID
+    ],
+
+    'azure' => [
+        'client_id' => env('AZURE_CLIENT_ID'),
+        'client_secret' => env('AZURE_CLIENT_SECRET'),
+        'tenant_id' => env('AZURE_TENANT_ID'),
+        'redirect_uri' => env('AZURE_REDIRECT_URI', env('APP_URL') . '/auth/azure/callback'),
+        'authority' => env('AZURE_AUTHORITY', 'https://login.microsoftonline.com'),
+    ],
+
 ];

@@ -87,7 +87,7 @@ class SocialAuthController extends Controller
      */
     protected function validateProvider(string $provider): void
     {
-        if (!in_array($provider, ['google', 'facebook', 'apple'])) {
+        if (!in_array($provider, ['google', 'facebook', 'apple', 'microsoft'])) {
             abort(404);
         }
     }

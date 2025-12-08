@@ -35,6 +35,7 @@ class User extends Authenticatable
         'password',
         'two_factor_secret',
         'two_factor_recovery_codes',
+        'email_2fa_code',
         'remember_token',
     ];
 
@@ -49,6 +50,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'email_2fa_expires_at' => 'datetime',
+            'email_2fa_verified_at' => 'datetime',
             'wallet_balance' => 'decimal:2',
             'subscription_renews_at' => 'datetime',
             'admin' => 'boolean',

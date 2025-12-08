@@ -13,7 +13,11 @@ import { Form, Head } from '@inertiajs/react';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
 import { useMemo, useState } from 'react';
 
-export default function TwoFactorChallenge() {
+interface TwoFactorChallengeProps {
+    emailOtpSent?: boolean;
+}
+
+export default function TwoFactorChallenge({ emailOtpSent = false }: TwoFactorChallengeProps) {
     const [showRecoveryInput, setShowRecoveryInput] = useState<boolean>(false);
     const [code, setCode] = useState<string>('');
 
@@ -33,8 +37,9 @@ export default function TwoFactorChallenge() {
 
         return {
             title: 'Authentication Code',
-            description:
-                'Enter the authentication code provided by your authenticator application.',
+            description: emailOtpSent
+                ? 'We\'ve sent a 6-digit code to your email address. Enter it below, or use your authenticator app code.'
+                : 'Enter the authentication code provided by your authenticator application or the code sent to your email.',
             toggleText: 'login using a recovery code',
         };
     }, [showRecoveryInput]);
@@ -99,6 +104,11 @@ export default function TwoFactorChallenge() {
                                         </InputOTP>
                                     </div>
                                     <InputError message={errors.code} />
+                                    {emailOtpSent && (
+                                        <p className="text-sm text-muted-foreground">
+                                            Check your email for a 6-digit code. This code expires in 10 minutes.
+                                        </p>
+                                    )}
                                 </div>
                             )}
 
