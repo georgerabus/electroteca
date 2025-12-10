@@ -20,33 +20,76 @@ class SecurityHeadersMiddleware
         // Content Security Policy (CSP)
         // Adjust these directives based on your application's needs
         $isProduction = app()->environment('production');
-        
+
+        // Allow explicit overrides via environment variables (comma separated hosts)
+        $extraConnect = array_filter(array_map('trim', explode(',', env('CSP_CONNECT_SRC', ''))));
+        $extraImg = array_filter(array_map('trim', explode(',', env('CSP_IMG_SRC', ''))));
+        $allowDev = filter_var(env('CSP_ALLOW_DEV', app()->environment('local') ? 'true' : 'false'), FILTER_VALIDATE_BOOLEAN);
+
+        // Base directives
         $csp = [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // 'unsafe-inline' and 'unsafe-eval' needed for Vite/React in dev
-            "style-src 'self' 'unsafe-inline'", // 'unsafe-inline' needed for inline styles
-            "img-src 'self' data: https:",
+            // By default, do NOT include 'unsafe-inline' or 'unsafe-eval'.
+            // Inline scripts/styles should be replaced with external files or nonces/hashes.
+            "script-src 'self'",
+            "style-src 'self'",
+            "img-src 'self' data:",
             "font-src 'self' data:",
             "frame-ancestors 'none'",
             "base-uri 'self'",
             "form-action 'self'",
         ];
 
-        // Configure connect-src based on environment
+        // connect-src: allow self plus any explicitly configured backends/CDNs
+        $connectSrc = ["'self'"];
+        // If in production, allow only https hostnames and configured extras
         if ($isProduction) {
-            $csp[] = "connect-src 'self' https:";
-            $csp[] = "upgrade-insecure-requests";
-            // In production, you may want stricter CSP
-            // Remove 'unsafe-inline' and 'unsafe-eval' if possible
-            // You'll need to use nonces or hashes for inline scripts/styles
+            // Optionally allow https: for remote APIs (if specified via env, list domains explicitly)
+            foreach ($extraConnect as $host) {
+                $connectSrc[] = $host;
+            }
         } else {
-            // In development, allow Vite dev server connections (WebSocket for HMR)
-            // Remove the default connect-src and add a more permissive one
-            $csp = array_filter($csp, fn($item) => !str_starts_with($item, 'connect-src'));
-            $csp[] = "connect-src 'self' https: ws: wss: http://localhost:* http://127.0.0.1:*";
-            // Also allow Vite's script sources - Vite runs on localhost:5173
-            $csp = array_filter($csp, fn($item) => !str_starts_with($item, 'script-src'));
-            $csp[] = "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:5173 http://127.0.0.1:5173";
+            // In non-production, allow local dev tools only when CSP_ALLOW_DEV is true
+            if ($allowDev) {
+                // Allow Vite dev server on default port (explicit hosts, no wildcards)
+                $connectSrc[] = 'http://localhost:5173';
+                $connectSrc[] = 'http://127.0.0.1:5173';
+                $connectSrc[] = 'ws://localhost:5173';
+                $connectSrc[] = 'ws://127.0.0.1:5173';
+                // Add any extra hosts configured
+                foreach ($extraConnect as $host) {
+                    $connectSrc[] = $host;
+                }
+            } else {
+                foreach ($extraConnect as $host) {
+                    $connectSrc[] = $host;
+                }
+            }
+        }
+
+        $csp[] = 'connect-src '.implode(' ', $connectSrc);
+
+        // If extra img hosts are provided, append them explicitly (no wildcard https: by default)
+        if (count($extraImg) > 0) {
+            $csp = array_filter($csp, fn($item) => !str_starts_with($item, 'img-src'));
+            $imgParts = array_merge(["'self'", 'data:'], $extraImg);
+            $csp[] = 'img-src '.implode(' ', $imgParts);
+        }
+
+        // Development exceptions for inline/eval (only when explicitly allowed)
+        if ($allowDev) {
+            // Append safe dev-only allowances for script/style necessary for local tooling
+            $csp = array_map(function ($directive) {
+                if (str_starts_with($directive, 'script-src')) {
+                    return $directive." 'unsafe-inline' 'unsafe-eval' http://localhost:5173 http://127.0.0.1:5173";
+                }
+
+                if (str_starts_with($directive, 'style-src')) {
+                    return $directive." 'unsafe-inline'";
+                }
+
+                return $directive;
+            }, $csp);
         }
 
         $response->headers->set('Content-Security-Policy', implode('; ', $csp));

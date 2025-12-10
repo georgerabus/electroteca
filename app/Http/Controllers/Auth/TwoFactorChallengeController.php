@@ -98,8 +98,8 @@ class TwoFactorChallengeController extends Controller
                 return $this->authenticate($request, $user);
             }
 
-            // Fall back to TOTP if email OTP fails
-            if ($user->hasEnabledTwoFactorAuthentication()) {
+            // Fall back to TOTP if email OTP fails and the user actually has TOTP enabled
+            if ($user->hasTOTPEnabled()) {
                 $provider = app(TwoFactorAuthenticationProvider::class);
                 try {
                     $secret = decrypt($user->two_factor_secret);

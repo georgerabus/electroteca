@@ -89,3 +89,14 @@ Route::middleware(['auth', 'verified', 'require.2fa'])->group(function () {
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
+
+// Serve sitemap through Laravel so middleware (CSP) is applied even when using php's built-in server
+Route::get('sitemap.xml', function () {
+    $path = public_path('sitemap.xml');
+
+    if (file_exists($path)) {
+        return response()->file($path, ['Content-Type' => 'application/xml']);
+    }
+
+    return abort(404);
+});
