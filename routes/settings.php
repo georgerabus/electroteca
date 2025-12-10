@@ -25,4 +25,14 @@ Route::middleware('auth')->group(function () {
 
     Route::get('settings/two-factor', [TwoFactorAuthenticationController::class, 'show'])
         ->name('two-factor.show');
+    
+    // Email-based two-factor routes
+    Route::post('settings/two-factor/email/send', [TwoFactorAuthenticationController::class, 'sendEmailOtp'])
+        ->name('two-factor.email.send');
+
+    Route::post('settings/two-factor/email/verify', [TwoFactorAuthenticationController::class, 'verifyEmailOtp'])
+        ->name('two-factor.email.verify');
+
+    Route::delete('settings/two-factor/email', [TwoFactorAuthenticationController::class, 'disableEmailOtp'])
+        ->name('two-factor.email.disable');
 });

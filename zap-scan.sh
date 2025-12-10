@@ -30,7 +30,7 @@ echo ""
 
 # Check if ZAP is running
 echo -e "${YELLOW}Checking if ZAP is running...${NC}"
-if ! curl -s "http://$ZAP_HOST:$ZAP_PORT" > /dev/null 2>&1; then
+if ! curl.exe -s "http://$ZAP_HOST:$ZAP_PORT" > /dev/null 2>&1; then
     echo -e "${RED}Error: ZAP is not running at http://$ZAP_HOST:$ZAP_PORT${NC}"
     echo "Please start ZAP first:"
     echo "  - Docker: docker run -d -p 8080:8080 owasp/zap2docker-stable"
@@ -56,11 +56,11 @@ zap_api() {
     local data="$2"
     
     if [ -n "$ZAP_API_KEY" ]; then
-        curl -s "http://$ZAP_HOST:$ZAP_PORT$endpoint?apikey=$ZAP_API_KEY" \
+        curl.exe -s "http://$ZAP_HOST:$ZAP_PORT$endpoint?apikey=$ZAP_API_KEY" \
             -H "Content-Type: application/json" \
             ${data:+-d "$data"}
     else
-        curl -s "http://$ZAP_HOST:$ZAP_PORT$endpoint" \
+        curl.exe -s "http://$ZAP_HOST:$ZAP_PORT$endpoint" \
             -H "Content-Type: application/json" \
             ${data:+-d "$data"}
     fi

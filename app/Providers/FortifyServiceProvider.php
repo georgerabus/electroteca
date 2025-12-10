@@ -23,6 +23,12 @@ class FortifyServiceProvider extends ServiceProvider
     {
         // Register custom logout response to clear JWT cookies
         $this->app->singleton(LogoutResponseContract::class, LogoutResponse::class);
+
+        // Override Fortify's RedirectIfTwoFactorAuthenticatable to support email-based 2FA
+        $this->app->singleton(
+            \Laravel\Fortify\Contracts\RedirectsIfTwoFactorAuthenticatable::class,
+            \App\Actions\RedirectIfTwoFactorAuthenticatable::class
+        );
     }
 
     /**
@@ -86,11 +92,11 @@ class FortifyServiceProvider extends ServiceProvider
 
             $user = \App\Models\User::find($loginId);
             
-            if (!$user || !$user->hasEnabledTwoFactorAuthentication()) {
+            if (!$user || !$user->hasEmailTwoFactorEnabled()) {
                 return redirect()->route('login');
             }
 
-            // Send email OTP
+            // Send email OTP (only if email 2FA enabled)
             $emailTwoFactorService = app(EmailTwoFactorService::class);
             $emailTwoFactorService->sendOtp($user);
 

@@ -77,6 +77,32 @@ class User extends Authenticatable
     }
 
     /**
+     * Determine if the user has two-factor authentication enabled.
+     * Returns true if either TOTP (two_factor_confirmed_at) or
+     * email-based 2FA (email_2fa_verified_at) is set.
+     */
+    public function hasEnabledTwoFactorAuthentication(): bool
+    {
+        return $this->hasTOTPEnabled() || $this->hasEmailTwoFactorEnabled();
+    }
+
+    /**
+     * Determine if the user has TOTP (authenticator app) 2FA enabled.
+     */
+    public function hasTOTPEnabled(): bool
+    {
+        return ! is_null($this->two_factor_confirmed_at) && in_array(\Laravel\Fortify\TwoFactorAuthenticatable::class, class_uses_recursive($this));
+    }
+
+    /**
+     * Determine if the user has email-based 2FA enabled.
+     */
+    public function hasEmailTwoFactorEnabled(): bool
+    {
+        return ! is_null($this->email_2fa_verified_at);
+    }
+
+    /**
      * Credit the user's wallet.
      */
     public function creditWallet(float $amount, ?string $reason = null, array $meta = []): WalletTransaction

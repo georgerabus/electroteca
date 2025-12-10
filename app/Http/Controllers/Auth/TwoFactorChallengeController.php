@@ -7,6 +7,8 @@ use App\Services\EmailTwoFactorService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Support\Facades\Log;
 use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 
 class TwoFactorChallengeController extends Controller
@@ -22,16 +24,22 @@ class TwoFactorChallengeController extends Controller
 
         $user = \App\Models\User::find($request->session()->get('login.id'));
 
-        if (!$user || !$user->hasEnabledTwoFactorAuthentication()) {
+        if (!$user || (!$user->hasEmailTwoFactorEnabled() && !$user->hasTOTPEnabled())) {
             return redirect()->route('login');
         }
 
-        // Send email OTP
+        // If user has email 2FA enabled, send email OTP. Otherwise render challenge (TOTP expected).
         $emailTwoFactorService = app(EmailTwoFactorService::class);
-        $emailTwoFactorService->sendOtp($user);
+        if ($user->hasEmailTwoFactorEnabled()) {
+            $emailTwoFactorService->sendOtp($user);
+            return inertia('auth/two-factor-challenge', [
+                'emailOtpSent' => true,
+            ]);
+        }
 
+        // Render the challenge view (TOTP expected)
         return inertia('auth/two-factor-challenge', [
-            'emailOtpSent' => true,
+            'emailOtpSent' => false,
         ]);
     }
 
@@ -59,7 +67,14 @@ class TwoFactorChallengeController extends Controller
                 ]);
             }
 
-            $recoveryCodes = json_decode(decrypt($user->two_factor_recovery_codes), true);
+            try {
+                $recoveryCodes = json_decode(decrypt($user->two_factor_recovery_codes), true);
+            } catch (DecryptException $e) {
+                Log::warning('Failed to decrypt two_factor_recovery_codes for user id '.$user->id.'. '.$e->getMessage());
+                throw ValidationException::withMessages([
+                    'recovery_code' => ['Two-factor recovery codes are invalid or corrupted. Please disable and re-enable two-factor authentication.'],
+                ]);
+            }
 
             if (!in_array($recoveryCode, $recoveryCodes)) {
                 throw ValidationException::withMessages([
@@ -86,7 +101,16 @@ class TwoFactorChallengeController extends Controller
             // Fall back to TOTP if email OTP fails
             if ($user->hasEnabledTwoFactorAuthentication()) {
                 $provider = app(TwoFactorAuthenticationProvider::class);
-                if ($provider->verify(decrypt($user->two_factor_secret), $code)) {
+                try {
+                    $secret = decrypt($user->two_factor_secret);
+                } catch (DecryptException $e) {
+                    Log::warning('Failed to decrypt two_factor_secret for user id '.$user->id.'. '.$e->getMessage());
+                    throw ValidationException::withMessages([
+                        'code' => ['Two-factor secret is invalid or corrupted. Please disable and re-enable two-factor authentication.'],
+                    ]);
+                }
+
+                if ($provider->verify($secret, $code)) {
                     return $this->authenticate($request, $user);
                 }
             }

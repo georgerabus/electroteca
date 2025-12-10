@@ -20,7 +20,7 @@ echo ""
 
 # Test 1: Check if application is running
 echo -e "${YELLOW}[1/8] Checking if application is running...${NC}"
-if curl -s "$APP_URL" > /dev/null 2>&1; then
+if curl.exe -s "$APP_URL" > /dev/null 2>&1; then
     echo -e "${GREEN}✓ Application is running${NC}"
 else
     echo -e "${RED}✗ Application is not running. Please start it with: php artisan serve${NC}"
@@ -30,7 +30,7 @@ echo ""
 
 # Test 2: Security Headers
 echo -e "${YELLOW}[2/8] Testing Security Headers...${NC}"
-HEADERS=$(curl -sI "$APP_URL" 2>&1)
+HEADERS=$(curl.exe -sI "$APP_URL" 2>&1)
 
 check_header() {
     local header_name=$1
@@ -53,7 +53,7 @@ echo ""
 echo -e "${YELLOW}[3/8] Testing HTTPS Enforcement...${NC}"
 if grep -q "FORCE_HTTPS=true" .env 2>/dev/null; then
     echo -e "${GREEN}✓ FORCE_HTTPS is enabled${NC}"
-    HTTP_RESPONSE=$(curl -sI "http://127.0.0.1:8000" 2>&1 | head -1)
+    HTTP_RESPONSE=$(curl.exe -sI "http://127.0.0.1:8000" 2>&1 | head -1)
     if echo "$HTTP_RESPONSE" | grep -qi "301\|302"; then
         echo -e "${GREEN}✓ HTTP to HTTPS redirect is working${NC}"
     else
@@ -66,7 +66,7 @@ echo ""
 
 # Test 4: CSRF Protection
 echo -e "${YELLOW}[4/8] Testing CSRF Protection...${NC}"
-CSRF_TEST=$(curl -s -X POST "$APP_URL/checkout" \
+CSRF_TEST=$(curl.exe -s -X POST "$APP_URL/checkout" \
     -H "Content-Type: application/json" \
     -d '{"test": "data"}' 2>&1)
 
@@ -79,7 +79,7 @@ echo ""
 
 # Test 5: Session Cookie Security
 echo -e "${YELLOW}[5/8] Testing Session Cookie Security...${NC}"
-COOKIES=$(curl -sI "$APP_URL" 2>&1 | grep -i "set-cookie")
+COOKIES=$(curl.exe -sI "$APP_URL" 2>&1 | grep -i "set-cookie")
 
 if echo "$COOKIES" | grep -qi "httponly"; then
     echo -e "${GREEN}✓ Session cookies have HttpOnly flag${NC}"

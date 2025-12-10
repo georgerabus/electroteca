@@ -6,6 +6,8 @@ use App\Services\EmailTwoFactorService;
 use Illuminate\Http\Request;
 use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Support\Facades\Log;
 
 class AuthenticateWithEmailOtp
 {
@@ -35,10 +37,17 @@ class AuthenticateWithEmailOtp
         }
 
         // Fall back to TOTP if email OTP fails
-        if ($code && $user->hasEnabledTwoFactorAuthentication()) {
+        if ($code && $user->hasTOTPEnabled()) {
             $provider = app(TwoFactorAuthenticationProvider::class);
+            try {
+                $secret = decrypt($user->two_factor_secret);
+            } catch (DecryptException $e) {
+                Log::warning('Failed to decrypt two_factor_secret for user id '.optional($user)->id.'. '.$e->getMessage());
+                return false;
+            }
+
             return $provider->verify(
-                decrypt($user->two_factor_secret),
+                $secret,
                 $code
             );
         }
