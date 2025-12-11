@@ -20,8 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // Keep XSRF token unencrypted so the frontend can read it for CSRF headers.
-        $middleware->encryptCookies(except: ['appearance', 'sidebar_state', 'XSRF-TOKEN']);
+        // Keep preference cookies unencrypted; leave XSRF-TOKEN encrypted so Laravel can decrypt the header axios/Inertia sends.
+        $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
         
         // Trust proxies for HTTPS detection behind load balancers
         $middleware->trustProxies(at: '*');
