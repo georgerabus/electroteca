@@ -5,11 +5,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import PasswordResetOtpController from '@/actions/App/Http/Controllers/Auth/PasswordResetOtpController';
 import AuthLayout from '@/layouts/auth-layout';
 import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 import { Form, Head, Link } from '@inertiajs/react';
+import { useState } from 'react';
 
 interface LoginProps {
     status?: string;
@@ -17,6 +19,15 @@ interface LoginProps {
 }
 
 export default function Login({ status, canResetPassword }: LoginProps) {
+    const [showEmailReset, setShowEmailReset] = useState<boolean>(false);
+    const [otpEmail, setOtpEmail] = useState<string>('');
+    const csrfToken =
+        typeof document !== 'undefined'
+            ? document
+                  .querySelector('meta[name=\"csrf-token\"]')
+                  ?.getAttribute('content') ?? ''
+            : '';
+
     return (
         <AuthLayout
             title="Log in to your account"
@@ -31,6 +42,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
             >
                 {({ processing, errors }) => (
                     <>
+                        <input type="hidden" name="_token" value={csrfToken} />
                         <div className="grid gap-6">
                             <div className="grid gap-2">
                                 <Label htmlFor="email">Email address</Label>
@@ -143,6 +155,159 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                     </>
                 )}
             </Form>
+
+            <div className="mt-6 rounded-lg border bg-muted/40 p-4">
+                <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                        <p className="text-sm font-medium">
+                            Reset with email code
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            Send a 6-digit code to your email and reset your password without leaving this page.
+                        </p>
+                    </div>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowEmailReset(!showEmailReset)}
+                    >
+                        {showEmailReset ? 'Hide' : 'Reset'}
+                    </Button>
+                </div>
+
+                {showEmailReset && (
+                    <div className="mt-4 grid gap-4">
+                        <Form
+                            {...PasswordResetOtpController.send.form()}
+                            className="grid gap-3"
+                        >
+                            {({ processing, errors }) => (
+                                <>
+                                    <input type="hidden" name="_token" value={csrfToken} />
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="otp_email">
+                                            Email address
+                                        </Label>
+                                        <Input
+                                            id="otp_email"
+                                            type="email"
+                                            name="email"
+                                            required
+                                            autoComplete="email"
+                                            placeholder="email@example.com"
+                                            value={otpEmail}
+                                            onChange={(event) =>
+                                                setOtpEmail(
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                        <InputError message={errors.email} />
+                                    </div>
+
+                                    <Button
+                                        type="submit"
+                                        className="w-full"
+                                        disabled={processing}
+                                    >
+                                        {processing && <Spinner />}
+                                        Send code
+                                    </Button>
+                                </>
+                            )}
+                        </Form>
+
+                        <Form
+                            {...PasswordResetOtpController.reset.form()}
+                            className="grid gap-3"
+                        >
+                            {({ processing, errors }) => (
+                                <>
+                                    <input type="hidden" name="_token" value={csrfToken} />
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="otp_email_reset">
+                                            Email address
+                                        </Label>
+                                        <Input
+                                            id="otp_email_reset"
+                                            type="email"
+                                            name="email"
+                                            required
+                                            autoComplete="email"
+                                            placeholder="email@example.com"
+                                            value={otpEmail}
+                                            onChange={(event) =>
+                                                setOtpEmail(
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                        <InputError message={errors.email} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="otp_code">
+                                            Email code
+                                        </Label>
+                                        <Input
+                                            id="otp_code"
+                                            name="code"
+                                            required
+                                            inputMode="numeric"
+                                            autoComplete="one-time-code"
+                                            placeholder="6-digit code"
+                                        />
+                                        <InputError message={errors.code} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="otp_new_password">
+                                            New password
+                                        </Label>
+                                        <Input
+                                            id="otp_new_password"
+                                            type="password"
+                                            name="password"
+                                            required
+                                            autoComplete="new-password"
+                                            placeholder="New password"
+                                        />
+                                        <InputError message={errors.password} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="otp_password_confirmation">
+                                            Confirm password
+                                        </Label>
+                                        <Input
+                                            id="otp_password_confirmation"
+                                            type="password"
+                                            name="password_confirmation"
+                                            required
+                                            autoComplete="new-password"
+                                            placeholder="Confirm password"
+                                        />
+                                        <InputError
+                                            message={errors.password_confirmation}
+                                        />
+                                    </div>
+
+                                    <Button
+                                        type="submit"
+                                        className="w-full"
+                                        disabled={processing}
+                                        data-test="email-otp-reset-button"
+                                    >
+                                        {processing && <Spinner />}
+                                        Reset password with email code
+                                    </Button>
+                                </>
+                            )}
+                        </Form>
+                    </div>
+                )}
+            </div>
 
             {status && (
                 <div className="mb-4 text-center text-sm font-medium text-green-600">

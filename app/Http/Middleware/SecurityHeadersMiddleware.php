@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Vite;
 use Symfony\Component\HttpFoundation\Response;
 
 class SecurityHeadersMiddleware
@@ -15,6 +16,11 @@ class SecurityHeadersMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Generate a CSP nonce so inline snippets can stay locked down without unsafe-inline
+        $nonce = base64_encode(random_bytes(16));
+        $request->attributes->set('csp_nonce', $nonce);
+        Vite::useCspNonce($nonce);
+
         $response = $next($request);
 
         // Content Security Policy (CSP)
@@ -27,21 +33,27 @@ class SecurityHeadersMiddleware
         $allowDev = filter_var(env('CSP_ALLOW_DEV', app()->environment('local') ? 'true' : 'false'), FILTER_VALIDATE_BOOLEAN);
 
         // Base directives
+        $scriptSrc = ["'self'", "'nonce-{$nonce}'"];
+        $styleSrc = ["'self'", "'nonce-{$nonce}'", 'https://fonts.bunny.net'];
+        $imgSrc = ["'self'", 'data:'];
+        $fontSrc = ["'self'", 'data:', 'https://fonts.bunny.net'];
         $csp = [
             "default-src 'self'",
-            // By default, do NOT include 'unsafe-inline' or 'unsafe-eval'.
-            // Inline scripts/styles should be replaced with external files or nonces/hashes.
-            "script-src 'self'",
-            "style-src 'self'",
-            "img-src 'self' data:",
-            "font-src 'self' data:",
             "frame-ancestors 'none'",
             "base-uri 'self'",
             "form-action 'self'",
         ];
 
+        [$viteHttpHosts, $viteSocketHosts] = $this->viteDevServerSources();
+
         // connect-src: allow self plus any explicitly configured backends/CDNs
-        $connectSrc = ["'self'"];
+        $connectSrc = array_merge(["'self'"], $viteHttpHosts, $viteSocketHosts);
+
+        if (! empty($viteHttpHosts)) {
+            $scriptSrc = array_merge($scriptSrc, $viteHttpHosts);
+            $styleSrc = array_merge($styleSrc, $viteHttpHosts);
+        }
+
         // If in production, allow only https hostnames and configured extras
         if ($isProduction) {
             // Optionally allow https: for remote APIs (if specified via env, list domains explicitly)
@@ -51,11 +63,6 @@ class SecurityHeadersMiddleware
         } else {
             // In non-production, allow local dev tools only when CSP_ALLOW_DEV is true
             if ($allowDev) {
-                // Allow Vite dev server on default port (explicit hosts, no wildcards)
-                $connectSrc[] = 'http://localhost:5173';
-                $connectSrc[] = 'http://127.0.0.1:5173';
-                $connectSrc[] = 'ws://localhost:5173';
-                $connectSrc[] = 'ws://127.0.0.1:5173';
                 // Add any extra hosts configured
                 foreach ($extraConnect as $host) {
                     $connectSrc[] = $host;
@@ -67,30 +74,26 @@ class SecurityHeadersMiddleware
             }
         }
 
-        $csp[] = 'connect-src '.implode(' ', $connectSrc);
-
-        // If extra img hosts are provided, append them explicitly (no wildcard https: by default)
         if (count($extraImg) > 0) {
-            $csp = array_filter($csp, fn($item) => !str_starts_with($item, 'img-src'));
-            $imgParts = array_merge(["'self'", 'data:'], $extraImg);
-            $csp[] = 'img-src '.implode(' ', $imgParts);
+            $imgSrc = array_merge($imgSrc, $extraImg);
         }
 
         // Development exceptions for inline/eval (only when explicitly allowed)
         if ($allowDev) {
             // Append safe dev-only allowances for script/style necessary for local tooling
-            $csp = array_map(function ($directive) {
-                if (str_starts_with($directive, 'script-src')) {
-                    return $directive." 'unsafe-inline' 'unsafe-eval' http://localhost:5173 http://127.0.0.1:5173";
-                }
-
-                if (str_starts_with($directive, 'style-src')) {
-                    return $directive." 'unsafe-inline'";
-                }
-
-                return $directive;
-            }, $csp);
+            $scriptSrc = array_merge($scriptSrc, ["'unsafe-inline'", "'unsafe-eval'"]);
+            $styleSrc[] = "'unsafe-inline'";
         }
+
+        // Remote font providers require style+font allowance and preconnect
+        $connectSrc[] = 'https://fonts.bunny.net';
+
+        $csp[] = 'connect-src '.implode(' ', array_unique($connectSrc));
+
+        $csp[] = 'script-src '.implode(' ', array_unique($scriptSrc));
+        $csp[] = 'style-src '.implode(' ', array_unique($styleSrc));
+        $csp[] = 'img-src '.implode(' ', array_unique($imgSrc));
+        $csp[] = 'font-src '.implode(' ', array_unique($fontSrc));
 
         $response->headers->set('Content-Security-Policy', implode('; ', $csp));
 
@@ -123,5 +126,37 @@ class SecurityHeadersMiddleware
 
         return $response;
     }
-}
 
+    /**
+     * Detect the currently configured Vite dev server hosts (if any).
+     *
+     * @return array{0: array<int, string>, 1: array<int, string>}
+     */
+    protected function viteDevServerSources(): array
+    {
+        $hotFile = public_path('hot');
+
+        if (! is_file($hotFile)) {
+            return [[], []];
+        }
+
+        $url = trim(file_get_contents($hotFile));
+
+        if ($url === '') {
+            return [[], []];
+        }
+
+        $httpHosts = [$url];
+        $socketHosts = [];
+        $parts = parse_url($url);
+
+        if ($parts !== false && isset($parts['scheme'], $parts['host'])) {
+            $socketScheme = $parts['scheme'] === 'https' ? 'wss' : 'ws';
+            $host = $parts['host'];
+            $port = isset($parts['port']) ? ':'.$parts['port'] : '';
+            $socketHosts[] = "{$socketScheme}://{$host}{$port}";
+        }
+
+        return [$httpHosts, $socketHosts];
+    }
+}

@@ -50,7 +50,7 @@ class EmailTwoFactorService
     /**
      * Verify email OTP code.
      */
-    public function verifyOtp(User $user, string $code): bool
+    public function verifyOtp(User $user, string $code, bool $markVerified = true): bool
     {
         // Check if code exists and hasn't expired
         if (!$user->email_2fa_code || !$user->email_2fa_expires_at) {
@@ -72,8 +72,10 @@ class EmailTwoFactorService
             return false;
         }
 
-        // Code is valid - mark as verified and clear the code
-        $user->email_2fa_verified_at = Carbon::now();
+        // Code is valid - optionally mark as verified and clear the code
+        if ($markVerified) {
+            $user->email_2fa_verified_at = Carbon::now();
+        }
         $user->email_2fa_code = null;
         $user->email_2fa_expires_at = null;
         $user->save();
@@ -91,4 +93,3 @@ class EmailTwoFactorService
         $user->save();
     }
 }
-

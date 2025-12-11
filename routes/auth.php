@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\NewPasswordController;
+use App\Http\Controllers\Auth\PasswordResetOtpController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use Illuminate\Support\Facades\Route;
@@ -17,6 +18,14 @@ Route::middleware('guest')->group(function () {
 
     Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
         ->name('password.email');
+
+    Route::post('forgot-password/email-otp', [PasswordResetOtpController::class, 'send'])
+        ->middleware('throttle:login')
+        ->name('password.email-otp');
+
+    Route::post('reset-password/email-otp', [PasswordResetOtpController::class, 'reset'])
+        ->middleware('throttle:login')
+        ->name('password.reset-otp');
 
     Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
         ->name('password.reset');
