@@ -9,7 +9,7 @@ import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import { logout } from '@/routes';
 import { edit } from '@/routes/profile';
 import { type User } from '@/types';
-import { Link, router } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { LogOut, Settings, LogIn, UserPlus } from 'lucide-react';
 
 interface UserMenuContentProps {
@@ -17,6 +17,7 @@ interface UserMenuContentProps {
 }
 
 export function UserMenuContent({ user }: UserMenuContentProps) {
+    const { csrf_token: csrfToken } = usePage().props as { csrf_token?: string };
     const cleanup = useMobileNavigation();
 
     const handleLogout = () => {
@@ -93,6 +94,8 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                 <Link
                     className="block w-full"
                     href={logout()}
+                    method="post"
+                    data={{ _token: csrfToken }}
                     as="button"
                     onClick={handleLogout}
                     data-test="logout-button"

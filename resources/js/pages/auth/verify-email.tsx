@@ -5,9 +5,11 @@ import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/auth-layout';
 import { logout } from '@/routes';
 import { send } from '@/routes/verification';
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, usePage } from '@inertiajs/react';
 
 export default function VerifyEmail({ status }: { status?: string }) {
+    const { csrf_token: csrfToken } = usePage().props as { csrf_token?: string };
+
     return (
         <AuthLayout
             title="Verify email"
@@ -32,6 +34,8 @@ export default function VerifyEmail({ status }: { status?: string }) {
 
                         <TextLink
                             href={logout()}
+                            method="post"
+                            data={{ _token: csrfToken }}
                             className="mx-auto block text-sm"
                         >
                             Log out

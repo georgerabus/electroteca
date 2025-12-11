@@ -10,7 +10,7 @@ import AuthLayout from '@/layouts/auth-layout';
 import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
-import { Form, Head, Link } from '@inertiajs/react';
+import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 interface LoginProps {
@@ -21,12 +21,7 @@ interface LoginProps {
 export default function Login({ status, canResetPassword }: LoginProps) {
     const [showEmailReset, setShowEmailReset] = useState<boolean>(false);
     const [otpEmail, setOtpEmail] = useState<string>('');
-    const csrfToken =
-        typeof document !== 'undefined'
-            ? document
-                  .querySelector('meta[name=\"csrf-token\"]')
-                  ?.getAttribute('content') ?? ''
-            : '';
+    const { csrf_token: csrfToken } = usePage().props as { csrf_token?: string };
 
     return (
         <AuthLayout
