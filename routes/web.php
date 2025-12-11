@@ -100,3 +100,10 @@ Route::get('sitemap.xml', function () {
 
     return abort(404);
 });
+
+// Email verification route used by the verification email (signed URL)
+use App\Http\Controllers\Auth\VerificationController;
+
+Route::get('email/verify/{id}/{hash}', [VerificationController::class, 'verify'])
+    ->name('verification.verify')
+    ->middleware('signed');

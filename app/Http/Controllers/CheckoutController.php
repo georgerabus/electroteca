@@ -7,6 +7,8 @@ use App\Services\LoanService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\WelcomeMail;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 
@@ -42,6 +44,17 @@ class CheckoutController extends Controller
 
         if (!$user) {
             return redirect('/login');
+        }
+
+        // Prevent unverified users from checking out / requesting loans
+        if (empty($user->email_verified_at)) {
+            try {
+                Mail::to($user->email)->send(new WelcomeMail($user));
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::warning('Failed to send verification email to user attempting checkout', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+            }
+
+            return back()->withErrors(['error' => 'You must verify your email before requesting loans. A verification email has been sent.'])->withInput();
         }
 
         $validator = Validator::make($request->all(), [

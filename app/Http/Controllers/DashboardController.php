@@ -11,8 +11,15 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
+        $user = $request->user();
+
         $query = LoanRequest::with(['product', 'user'])
             ->orderBy('created_at', 'desc');
+
+        // If the user is not an admin, show only their own loans
+        if (! $user || ! $user->admin) {
+            $query->where('user_id', $user?->id ?? 0);
+        }
 
         // Filter by status
         if ($request->filled('status') && $request->status !== 'All') {

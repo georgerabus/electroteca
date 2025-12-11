@@ -128,6 +128,11 @@ export default function ProductShow({ product }: ProductShowPageProps) {
             },
             onError: (errors) => {
                 console.error('Borrow error:', errors);
+                // Show popup if server returned an unverified-email message
+                if (errors && (errors as any).error) {
+                    // Keep behavior unchanged server-side; just surface a popup to the user
+                    alert((errors as any).error);
+                }
             },
             onFinish: () => {
                 setIsBorrowing(false);

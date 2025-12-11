@@ -110,6 +110,12 @@ export default function Checkout({ items: serverItems, total: serverTotal, curre
                     window.dispatchEvent(new CustomEvent('cart-updated', { detail: [] }));
                 }
             },
+            onError: (errors) => {
+                // If server returned the unverified-email message, show a popup to the user
+                if (errors && (errors as any).error) {
+                    alert((errors as any).error);
+                }
+            },
         });
     };
 

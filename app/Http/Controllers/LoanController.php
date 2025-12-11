@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\LoanRequest;
 use App\Models\Product;
 use App\Services\LoanService;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\WelcomeMail;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -35,6 +37,18 @@ class LoanController extends Controller
     public function borrow(Request $request, Product $product)
     {
         $user = $request->user();
+
+        // Prevent unverified users from requesting loans. Send verification email if not verified.
+        if (empty($user->email_verified_at)) {
+            try {
+                Mail::to($user->email)->send(new WelcomeMail($user));
+            } catch (\Exception $e) {
+                // Log but don't expose internal mail errors to the user
+                \Illuminate\Support\Facades\Log::warning('Failed to send verification email to user attempting loan', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+            }
+
+            return back()->withErrors(['error' => 'You must verify your email before requesting a loan. A verification email has been sent to your address.']);
+        }
 
         $validator = Validator::make($request->all(), [
             'period_from' => 'required|date|after_or_equal:today',
