@@ -112,7 +112,7 @@ export default function MyLoans({ loans }: MyLoansPageProps) {
                     </div>
                     <Link
                         href="/shop"
-                        className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition"
+                        className="inline-flex items-center gap-2 text-sm text-black dark:text-gray-400 hover:text-white transition"
                     >
                         <ArrowLeft className="h-4 w-4" />
                         Back to Shop

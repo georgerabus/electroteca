@@ -3,7 +3,7 @@ import { products } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
-import { ShoppingCart, ArrowLeft, Package, Calendar, DollarSign, AlertCircle } from 'lucide-react';
+import { ShoppingCart, ArrowLeft, Package, Calendar, DollarSign, AlertCircle, Star } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
 import { type SharedData } from '@/types';
 
@@ -39,6 +39,62 @@ export default function ProductShow({ product }: ProductShowPageProps) {
     const [borrowPeriodTo, setBorrowPeriodTo] = useState('');
     const [borrowDetails, setBorrowDetails] = useState('');
     const { addToCart } = useCart();
+
+    // --- Reviews (client-side sample implementation) ---
+    type Review = {
+        id: string;
+        name: string;
+        rating: number; // 1-5
+        comment: string;
+        created_at: string;
+    };
+
+    const sampleReviews: Review[] = [
+        {
+            id: 'r1',
+            name: 'Alex I.',
+            rating: 5,
+            comment: 'Excellent kit — clear layout and reliable contacts. Great for rapid prototyping.',
+            created_at: new Date().toISOString(),
+        },
+        {
+            id: 'r2',
+            name: 'Maria P.',
+            rating: 4,
+            comment: 'Very versatile. Wish documentation included a few more example circuits.',
+            created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
+        },
+    ];
+
+    const [reviews, setReviews] = useState<Review[]>(sampleReviews);
+    const [reviewName, setReviewName] = useState('');
+    const [reviewRating, setReviewRating] = useState(5);
+    const [reviewComment, setReviewComment] = useState('');
+
+    const averageRating = reviews.length
+        ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10
+        : 0;
+
+    const submitReview = (e?: React.FormEvent) => {
+        e?.preventDefault();
+        if (!reviewName.trim() || !reviewComment.trim()) {
+            alert('Please provide your name and a comment.');
+            return;
+        }
+
+        const newReview: Review = {
+            id: `r_${Date.now()}`,
+            name: reviewName.trim(),
+            rating: reviewRating,
+            comment: reviewComment.trim(),
+            created_at: new Date().toISOString(),
+        };
+
+        setReviews((prev) => [newReview, ...prev]);
+        setReviewName('');
+        setReviewRating(5);
+        setReviewComment('');
+    };
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Shop', href: products().url },
@@ -148,7 +204,7 @@ export default function ProductShow({ product }: ProductShowPageProps) {
                 {/* Back button */}
                 <Link
                     href={products().url}
-                    className="mb-6 inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition"
+                    className="mb-6 inline-flex items-center gap-2 text-sm text-black dark:text-gray-400 hover:text-white transition"
                 >
                     <ArrowLeft className="h-4 w-4" />
                     Back to Shop
@@ -172,7 +228,7 @@ export default function ProductShow({ product }: ProductShowPageProps) {
                     <div className="flex flex-col justify-between">
                         <div>
                             {/* Category */}
-                            <div className="mb-2 text-sm text-gray-400">{product.category}</div>
+                            <div className="mb-2 text-sm text-black dark:text-gray-400">{product.category}</div>
 
                             {/* Title */}
                             <h1 className="mb-4 text-3xl font-bold text-white">{product.name}</h1>
@@ -185,7 +241,62 @@ export default function ProductShow({ product }: ProductShowPageProps) {
                             {/* Description */}
                             <div className="mb-6">
                                 <h2 className="mb-2 text-lg font-semibold text-white">Description</h2>
-                                <p className="text-gray-300 leading-relaxed">{product.description}</p>
+                                <p className="text-black dark:text-gray-300 leading-relaxed">{product.description}</p>
+                            </div>
+
+                            {/* Reviews */}
+                            <div className="mb-6">
+                                <h2 className="mb-3 text-lg font-semibold text-white">Customer Reviews</h2>
+
+                                <div className="mb-4 flex items-center gap-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="inline-flex items-center justify-center rounded-full bg-yellow-500 px-3 py-1 text-sm font-semibold text-black">{averageRating || '—'}</div>
+                                        <div className="text-sm text-black dark:text-gray-300">avg rating</div>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        {Array.from({ length: 5 }).map((_, idx) => (
+                                            <Star key={idx} className={`h-4 w-4 ${idx < Math.round(averageRating) ? 'text-yellow-400' : 'text-gray-600/40'}`} />
+                                        ))}
+                                    </div>
+                                    <div className="text-sm text-gray-400">{reviews.length} review{reviews.length === 1 ? '' : 's'}</div>
+                                </div>
+
+                                {/* Reviews list */}
+                                <div className="space-y-3 mb-4">
+                                    {reviews.map((rv) => (
+                                        <div key={rv.id} className="rounded-lg border border-white/6 bg-white/3 p-3">
+                                            <div className="flex items-center justify-between">
+                                                <div className="font-semibold text-black dark:text-white">{rv.name}</div>
+                                                <div className="flex items-center gap-1 text-yellow-400">
+                                                    {Array.from({ length: rv.rating }).map((_, i) => (
+                                                        <Star key={i} className="h-4 w-4" />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="text-sm text-gray-700 dark:text-gray-300 mt-1">{rv.comment}</div>
+                                            <div className="text-xs text-gray-500 mt-2">{new Date(rv.created_at).toLocaleDateString()}</div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Review form */}
+                                <form onSubmit={submitReview} className="rounded-lg border border-white/6 bg-white/5 p-4">
+                                    <h3 className="text-sm font-semibold text-white mb-2">Write a review</h3>
+                                    <div className="grid grid-cols-1 gap-3">
+                                        <input value={reviewName} onChange={(e) => setReviewName(e.target.value)} placeholder="Your name" className="w-full rounded-md border border-white/10 bg-white dark:bg-neutral-800 text-black dark:text-white px-3 py-2" />
+                                        <div className="flex items-center gap-2">
+                                            <label className="text-sm text-gray-300">Rating:</label>
+                                            <select value={reviewRating} onChange={(e) => setReviewRating(Number(e.target.value))} className="rounded-md border border-white/10 bg-white dark:bg-neutral-800 text-black dark:text-white px-2 py-1">
+                                                {[5,4,3,2,1].map((r) => <option key={r} value={r}>{r} star{r>1?'s':''}</option>)}
+                                            </select>
+                                        </div>
+                                        <textarea value={reviewComment} onChange={(e) => setReviewComment(e.target.value)} rows={4} placeholder="Your review" className="w-full rounded-md border border-white/10 bg-white dark:bg-neutral-800 text-black dark:text-white px-3 py-2" />
+                                        <div className="flex gap-2">
+                                            <button type="submit" className="rounded-xl bg-red-600 text-white px-4 py-2 font-semibold hover:bg-red-700">Submit Review</button>
+                                            <button type="button" onClick={() => { setReviewName(''); setReviewRating(5); setReviewComment(''); }} className="rounded-xl border border-white/10 text-white px-4 py-2">Reset</button>
+                                        </div>
+                                    </div>
+                                </form>
                             </div>
 
                             {/* Stock Info */}
@@ -217,7 +328,7 @@ export default function ProductShow({ product }: ProductShowPageProps) {
                                     {borrowInfo && (
                                         <div className="mb-3 rounded-lg border border-white/10 bg-white/5 p-3">
                                             <div className="flex items-center justify-between mb-2">
-                                                <span className="text-sm text-gray-400">Deposit Required:</span>
+                                                <span className="text-sm text-black dark:text-gray-400">Deposit Required:</span>
                                                 <span className="text-sm font-semibold text-white">
                                                     {borrowInfo.deposit_required.toFixed(2)} CR
                                                 </span>

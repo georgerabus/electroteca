@@ -3,7 +3,7 @@ import { products } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import { ChangeEvent, useMemo, useState } from 'react';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Star } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
 
 type Product = {
@@ -17,6 +17,7 @@ type Product = {
     is_available: boolean;
     category: string;
     image_url?: string;
+    avg_rating?: number;
 };
 
 type ProductsPageProps = {
@@ -107,6 +108,18 @@ function ProductCard({ product }: { product: Product }) {
                     <h3 className="text-base leading-tight font-semibold text-black dark:text-white group-hover:text-red-400 transition">
                         {product.name}
                     </h3>
+
+                    {/* Stars / avg rating (if available) */}
+                    <div className="mt-1 flex items-center gap-2">
+                        <div className="flex items-center gap-0.5">
+                            {Array.from({ length: 5 }).map((_, si) => (
+                                <Star key={si} className={`h-3 w-3 ${product.avg_rating && si < Math.round(product.avg_rating) ? 'text-yellow-400' : 'text-gray-400/60'}`} />
+                            ))}
+                        </div>
+                        <div className="text-xs text-black dark:text-gray-300">
+                            {product.avg_rating ? `${(Math.round((product.avg_rating || 0) * 10) / 10).toFixed(1)}` : '—'}
+                        </div>
+                    </div>
                 </div>
                 {/* Price + stock aligned left */}
                     <div className="mb-2 flex items-center gap-3 text-sm">
@@ -115,10 +128,10 @@ function ProductCard({ product }: { product: Product }) {
                     </div>
                     <div className="text-gray-700 dark:text-gray-300">Stock: {product.stock_quantity}</div>
                 </div>
-                <p className="mb-3 line-clamp-2 text-xs text-gray-700 dark:text-gray-300">
+                <p className="mb-3 line-clamp-2 text-xs text-black dark:text-gray-300">
                     {product.description}
                 </p>
-                <div className="mb-4 text-xs text-gray-700 dark:text-gray-300">
+                <div className="mb-4 text-xs text-black dark:text-gray-300">
                     Category: {product.category}
                 </div>
                 <div className="flex gap-2">
