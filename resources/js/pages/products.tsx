@@ -6,6 +6,23 @@ import { ChangeEvent, useMemo, useState } from 'react';
 import { ShoppingCart, Star } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
 
+function FilledStar(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg {...props} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+            <path fill="currentColor" d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.787 1.402 8.173L12 18.897l-7.336 3.873 1.402-8.173L.132 9.21l8.2-1.192z" />
+        </svg>
+    );
+}
+
+function HalfStar() {
+    return (
+        <span className="relative inline-block h-3 w-3">
+            <FilledStar className="absolute left-0 top-0 h-3 w-3 text-yellow-400" style={{ clipPath: 'inset(0 50% 0 0)' }} />
+            <Star className="absolute left-0 top-0 h-3 w-3 text-gray-400/60" />
+        </span>
+    );
+}
+
 type Product = {
     id: number;
     name: string;
@@ -62,9 +79,13 @@ function ToolbarSelect(
     );
 }
 
-function ProductCard({ product }: { product: Product }) {
+function ProductCard({ product, demoRating }: { product: Product; demoRating?: number }) {
     const [addedToCart, setAddedToCart] = useState(false);
     const { addToCart } = useCart();
+    const rawRating = product.avg_rating;
+    const numericRating = (rawRating !== undefined && rawRating !== null && !Number.isNaN(Number(rawRating))) ? Number(rawRating) : null;
+    const displayRating = numericRating ?? demoRating ?? 4.5; // use demoRating if provided, otherwise fallback to 4.5
+    const roundedRating = Math.round(displayRating);
 
     const handleAddToCart = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -112,12 +133,18 @@ function ProductCard({ product }: { product: Product }) {
                     {/* Stars / avg rating (if available) */}
                     <div className="mt-1 flex items-center gap-2">
                         <div className="flex items-center gap-0.5">
-                            {Array.from({ length: 5 }).map((_, si) => (
-                                <Star key={si} className={`h-3 w-3 ${product.avg_rating && si < Math.round(product.avg_rating) ? 'text-yellow-400' : 'text-gray-400/60'}`} />
-                            ))}
+                            {(() => {
+                                const full = Math.floor(displayRating);
+                                const hasHalf = (displayRating - full) >= 0.5;
+                                return Array.from({ length: 5 }).map((_, si) => {
+                                    if (si < full) return <FilledStar key={si} className="h-3 w-3 text-yellow-400" />;
+                                    if (si === full && hasHalf) return <HalfStar key={si} />;
+                                    return <Star key={si} className="h-3 w-3 text-gray-400/60" />;
+                                });
+                            })()}
                         </div>
                         <div className="text-xs text-black dark:text-gray-300">
-                            {product.avg_rating ? `${(Math.round((product.avg_rating || 0) * 10) / 10).toFixed(1)}` : '—'}
+                            {(Math.round(displayRating * 10) / 10).toFixed(1)}
                         </div>
                     </div>
                 </div>
@@ -163,9 +190,13 @@ function ProductCard({ product }: { product: Product }) {
     );
 }
 
-function ProductCardWithDiscount({ product, discountPercent }: { product: Product; discountPercent?: number }) {
+function ProductCardWithDiscount({ product, discountPercent, demoRating }: { product: Product; discountPercent?: number; demoRating?: number }) {
     const [addedToCart, setAddedToCart] = useState(false);
     const { addToCart } = useCart();
+    const rawRating = product.avg_rating;
+    const numericRating = (rawRating !== undefined && rawRating !== null && !Number.isNaN(Number(rawRating))) ? Number(rawRating) : null;
+    const displayRating = numericRating ?? demoRating ?? 4.5; // use demoRating if provided, otherwise fallback to 4.5
+    const roundedRating = Math.round(displayRating);
 
     const handleAddToCart = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -215,12 +246,18 @@ function ProductCardWithDiscount({ product, discountPercent }: { product: Produc
                     </h3>
                     <div className="mt-1 flex items-center gap-2">
                         <div className="flex items-center gap-0.5">
-                            {Array.from({ length: 5 }).map((_, si) => (
-                                <Star key={si} className={`h-3 w-3 ${product.avg_rating && si < Math.round(product.avg_rating) ? 'text-yellow-400' : 'text-gray-400/60'}`} />
-                            ))}
+                            {(() => {
+                                const full = Math.floor(displayRating);
+                                const hasHalf = (displayRating - full) >= 0.5;
+                                return Array.from({ length: 5 }).map((_, si) => {
+                                    if (si < full) return <FilledStar key={si} className="h-3 w-3 text-yellow-400" />;
+                                    if (si === full && hasHalf) return <HalfStar key={si} />;
+                                    return <Star key={si} className="h-3 w-3 text-gray-400/60" />;
+                                });
+                            })()}
                         </div>
                         <div className="text-xs text-black dark:text-gray-300">
-                            {product.avg_rating ? `${(Math.round((product.avg_rating || 0) * 10) / 10).toFixed(1)}` : '—'}
+                            {(Math.round(displayRating * 10) / 10).toFixed(1)}
                         </div>
                     </div>
                 </div>
@@ -415,8 +452,16 @@ export default function Products({
                         // Apply discount only to first two visible products
                         const promo = promotions.find((p) => p.id === selectedPromotion) || promotions[0];
                         const applyDiscount = promo.percent > 0 && idx < 2;
+                        // Demo ratings to display when backend doesn't supply avg_rating
+                        const demoRatings = [4.5, 5, 3, 3.5];
+                        const demoRating = demoRatings[idx % demoRatings.length];
                         return (
-                            <ProductCardWithDiscount key={product.id} product={product} discountPercent={applyDiscount ? promo.percent : undefined} />
+                            <ProductCardWithDiscount
+                                key={product.id}
+                                product={product}
+                                discountPercent={applyDiscount ? promo.percent : undefined}
+                                demoRating={demoRating}
+                            />
                         );
                     })}
                 </div>
