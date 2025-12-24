@@ -57,7 +57,7 @@ export default function UserDashboard({ user, loans }: UserDashboardPageProps) {
             { title: user.name, href: `/admin/users/${user.id}/dashboard` }
         ]}>
             <Head title={`Admin - ${user.name}`} />
-            <div className="mx-auto max-w-7xl p-4 sm:p-8">
+            <div className="mx-auto max-w-full lg:max-w-[1400px] xl:max-w-[1800px] p-4 sm:p-8">
                 <Link
                     href="/admin/users"
                     className="mb-6 inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition"

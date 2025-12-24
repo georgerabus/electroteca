@@ -144,7 +144,7 @@ export default function ProductShow({ product }: ProductShowPageProps) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={product.name} />
 
-            <div className="mx-auto max-w-7xl p-4 md:p-8">
+            <div className="mx-auto max-w-full lg:max-w-10xl p-4 md:p-8">
                 {/* Back button */}
                 <Link
                     href={products().url}

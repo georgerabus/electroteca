@@ -12,8 +12,7 @@ const Input = ({ label, id, placeholder, type = 'text', className = '' }) => (
             type={type}
             id={id}
             placeholder={placeholder}
-            // Background neutral-800 for darker input fields
-    className={`w-full rounded-lg border border-neutral-700 bg-neutral-800 text-white placeholder-gray-500 p-3 shadow-sm focus:border-red-600 focus:ring-red-600 transition duration-150 ease-in-out ${className}`}
+            className={`w-full rounded-lg border border-neutral-700 bg-neutral-800 text-white placeholder-gray-500 p-3 shadow-sm focus:border-red-600 focus:ring-red-600 transition duration-150 ease-in-out ${className}`}
         />
     </div>
 );
@@ -23,7 +22,8 @@ export default function Contact() {
         <AppLayout breadcrumbs={[{ title: 'Contact', href: '/contact' }]}>
             <Head title="Contact" />
             
-            <div className="mx-auto max-w-5xl p-4 sm:p-8">
+            <div className="w-full bg-neutral-900 py-12">
+                <div className="mx-auto w-full max-w-[1100px] p-4 sm:p-8">
 
                 {/* --- Header Section (Only H1 remains) --- */}
                 <header className="text-center mb-12">
@@ -59,8 +59,8 @@ export default function Contact() {
                                 </label>
                                 <textarea
                                     id="message"
-                                    rows="4" // Standard HTML attribute
-                                    placeholder="Leave us a message..."
+                                        rows={4}
+                                        placeholder="Leave us a message..."
                                     className="w-full rounded-lg border border-neutral-700 bg-neutral-800 text-white placeholder-gray-500 p-3 shadow-sm focus:border-red-600 focus:ring-red-600 transition duration-150 ease-in-out"
                                 ></textarea>
                             </div>
@@ -74,12 +74,10 @@ export default function Contact() {
                             </button>
                         </form>
                     </div>
+                    </div>
 
                     {/* Right Column: Contact Methods Sidebar (bg-neutral-800) */}
                     <div className="bg-neutral-800 p-6 sm:p-10 space-y-10 lg:border-l border-neutral-700">
-                        
-                
-
                         {/* Call us */}
                         <div>
                             <h2 className="text-xl font-bold text-white mb-3">Call us</h2>
@@ -107,5 +105,6 @@ export default function Contact() {
                 </div>
             </div>
         </AppLayout>
+        
     );
 }
