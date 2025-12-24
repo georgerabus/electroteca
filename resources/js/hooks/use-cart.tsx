@@ -5,11 +5,17 @@ import { type SharedData } from '@/types';
 export type CartItem = {
   id: number;
   name: string;
+  // price stored as string (e.g. "12.50") — represents the per-unit price that was added to cart
   price: string;
   currency: string;
   quantity: number;
   image_url?: string;
+  // Optional discount applied when adding to cart (percentage, e.g. 10 for 10%)
+  discountPercent?: number;
+  // Optional originalPrice when a discount is applied, stored as string
+  original_price?: string;
 };
+
 
 export function useCart() {
   const { auth } = usePage<SharedData>().props;
@@ -123,7 +129,18 @@ export function useCart() {
   const clearCart = () => setCartAndSync(() => []);
 
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = cart.reduce((sum, item) => sum + parseFloat(item.price) * item.quantity, 0);
+  const totalPrice = cart.reduce((sum, item) => {
+    // Determine base price: prefer original_price when present (stored as string), otherwise use item.price
+    const basePriceStr = item.original_price ?? item.price ?? '0';
+    const base = parseFloat(basePriceStr || '0');
+
+    // If discountPercent is present, compute discounted unit price from base
+    const unitPrice = item.discountPercent && item.discountPercent > 0
+      ? base * (1 - item.discountPercent / 100)
+      : parseFloat(item.price || base.toFixed(2) || '0');
+
+    return sum + unitPrice * item.quantity;
+  }, 0);
 
   return { cart, addToCart, removeFromCart, updateQuantity, clearCart, itemCount, totalPrice };
 }

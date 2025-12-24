@@ -170,38 +170,6 @@ export default function Main() {
                 </section>
 
                 <hr className="border-t border-neutral-800" />
-
-                {/* Footer */}
-                <footer className="bg-neutral-900 py-12 px-3 border-t border-neutral-800">
-                    <div className="container mx-auto flex flex-col md:flex-row justify-between items-center md:items-stretch">
-                        <div className="mb-8 md:mb-0 flex-1">
-                            <div className="flex items-center gap-3 mb-3">
-                                <span className="block rounded-xl bg-red-600 p-2">
-                                    <svg width="32" height="32" fill="currentColor" className="text-white" viewBox="0 0 20 20"><rect x="2" y="2" width="4" height="4" rx="1"/><rect x="8" y="2" width="4" height="4" rx="1"/><rect x="14" y="2" width="4" height="4" rx="1"/><rect x="2" y="8" width="4" height="4" rx="1"/><rect x="8" y="8" width="4" height="4" rx="1"/><rect x="14" y="8" width="4" height="4" rx="1"/><rect x="2" y="14" width="4" height="4" rx="1"/><rect x="8" y="14" width="4" height="4" rx="1"/><rect x="14" y="14" width="4" height="4" rx="1"/></svg>
-                                </span>
-                                <span className="text-xl text-white font-bold tracking-tight always-white">Electroteca</span>
-                            </div>
-                            <div className="text-gray-300 leading-relaxed">
-                                Studentilor Street 9/11, Chișinău, Moldova<br />
-                                andrei.bragarenco@microlab.utm.md<br />
-                                0 (79) 993255
-                            </div>
-                            <div className="flex gap-3 mt-4">
-                                <a href="#" className="text-gray-400 hover:text-white transition"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-linkedin"><path d="M16 8a6 6 0 0 1 6 6v6h-4v-6a2 2 0 00-4 0v6h-4v-6a6 6 0 016-6z"/><rect width="4" height="12" x="2" y="9" rx="2"/><circle cx="4" cy="4" r="2"/></svg></a>
-                                <a href="#" className="text-gray-400 hover:text-white transition"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-instagram"><rect width="20" height="20" x="2" y="2" rx="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg></a>
-                                <a href="#" className="text-gray-400 hover:text-white transition"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-facebook"><path d="M18 2h-3a5 5 0 0 0-5 5v3H6v4h4v9h4v-9h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></a>
-                                <a href="#" className="text-gray-400 hover:text-white transition"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-youtube"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg></a>
-                            </div>
-                        </div>
-                        <div className="flex-1 text-gray-400 text-center md:text-right">
-                            <div className="mb-4 md:mb-2 text-xl text-white font-bold always-white">Our Latest Innovations</div>
-                            <span className="inline-block mb-2">
-                                <Link href="#top" className="text-red-500 font-semibold hover:text-red-700">Back to top ↑</Link>
-                            </span>
-                            <div className="text-gray-500 mt-2">© {new Date().getFullYear()} Electroteca. All rights reserved.</div>
-                        </div>
-                    </div>
-                </footer>
             </div>
         </AppLayout>
     );

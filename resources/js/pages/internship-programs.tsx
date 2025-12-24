@@ -41,6 +41,8 @@ export default function InternshipPrograms() {
                     </div>
                 </section>
 
+                <hr className="border-t border-neutral-800" />
+
                 {/* What to expect */}
                 <section className="container mx-auto px-4 py-16">
                     <h2 className="text-3xl font-bold mb-10 text-white">Ce te așteaptă la Internship?</h2>

@@ -111,6 +111,8 @@ export default function Blog() {
                         ))}
                     </div>
                 </section>
+                
+                <hr className="border-t border-neutral-800" />
             </div>
         </AppLayout>
     );

@@ -93,7 +93,7 @@ function ToolbarSelect(
         <div className="relative w-full md:w-72">
             <select
                 {...props}
-                className="peer w-full appearance-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm backdrop-blur transition outline-none hover:bg-white/7 focus:border-white/20"
+                className="peer w-full appearance-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-black dark:text-white backdrop-blur transition outline-none hover:bg-white/7 focus:border-white/20"
             />
             <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center opacity-60">
                 ▾
@@ -152,18 +152,14 @@ export default function Dashboard({ loanRequests, products, filters }: Dashboard
                 <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
                     <ToolbarSelect value={status} onChange={onStatusChange}>
                         {STATUS_OPTIONS.map((s) => (
-                            <option key={s} value={s} className="bg-zinc-900">
-                                {s === 'All' ? 'All statuses' : s}
-                            </option>
+                            <option key={s} value={s}>{s === 'All' ? 'All statuses' : s}</option>
                         ))}
                     </ToolbarSelect>
 
                     <ToolbarSelect value={product} onChange={onProductChange}>
-                        <option value="All products" className="bg-zinc-900">All products</option>
+                        <option value="All products">All products</option>
                         {products.map((p) => (
-                            <option key={p} value={p} className="bg-zinc-900">
-                                {p}
-                            </option>
+                            <option key={p} value={p}>{p}</option>
                         ))}
                     </ToolbarSelect>
 

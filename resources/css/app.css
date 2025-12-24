@@ -178,3 +178,33 @@
 .always-white {
     color: #ffffff !important;
 }
+
+/* Simple fade + lift animation for page content entrance */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeInUp 320ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+/* Ensure native select dropdowns follow theme colors and remain readable
+   Some browsers render native option backgrounds differently; force both
+   the select control and option elements to use the theme variables. */
+select,
+select option,
+select optgroup {
+    color: var(--foreground) !important;
+    background-color: var(--background) !important;
+}
+
+/* On WebKit browsers the dropdown arrow may inherit color — keep it adaptive */
+select::-ms-expand { display: none; }
+select { -webkit-appearance: none; -moz-appearance: none; appearance: none; }

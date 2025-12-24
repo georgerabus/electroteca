@@ -33,10 +33,10 @@ export default function CartPage() {
         {cart.length === 0 ? (
           <div className="text-center my-24">
             <div className="mb-4 text-4xl opacity-20">🛒</div>
-            <p className="mb-4 text-lg text-gray-300">Your cart is empty.</p>
-            <Link href="/shop" className="rounded-xl px-6 py-3 bg-red-600 text-white font-semibold hover:bg-red-700 transition">
-              Back to shop
-            </Link>
+             <p className="mb-4 text-lg text-black dark:text-white">Your cart is empty.</p>
+             <Link href="/shop" className="mt-6 inline-block rounded-xl px-6 py-3 bg-red-600 text-white font-semibold hover:bg-red-700 transition">
+               Back to shop
+             </Link>
           </div>
         ) : (
           <>
@@ -52,7 +52,17 @@ export default function CartPage() {
                   </div>
                   <div className="flex-1">
                     <div className="font-semibold text-white">{item.name}</div>
-                    <div className="text-sm text-gray-400">{item.price} {item.currency} x {item.quantity}</div>
+                    <div className="text-sm text-gray-400">
+                      {item.discountPercent && item.discountPercent > 0 ? (
+                        <>
+                          <span className="text-xs text-gray-500 line-through mr-2">{item.original_price ?? item.price} {item.currency}</span>
+                          <span className="font-medium text-white">{parseFloat(item.price).toFixed(2)} {item.currency}</span>
+                          <span className="ml-2">x {item.quantity}</span>
+                        </>
+                      ) : (
+                        <>{item.price} {item.currency} x {item.quantity}</>
+                      )}
+                    </div>
                     <div className="mt-2 flex items-center gap-2">
                       <button className="rounded px-3 py-1 bg-zinc-800 text-white" onClick={() => updateQuantity(item.id, item.quantity - 1)} disabled={item.quantity <= 1}>-</button>
                       <span className="px-2">{item.quantity}</span>
@@ -66,7 +76,21 @@ export default function CartPage() {
                       </button>
                     </div>
                   </div>
-                  <div className="font-semibold text-white text-right w-20">{(parseFloat(item.price) * item.quantity).toFixed(2)}</div>
+                  <div className="font-semibold text-white text-right w-20">
+                    {(() => {
+                      // If original_price exists then `item.price` is expected to already be the discounted unit price.
+                      if (item.discountPercent && item.original_price) {
+                        return (parseFloat(item.price || '0') * item.quantity).toFixed(2);
+                      }
+                      // Otherwise, if discountPercent is present but original_price missing, compute discounted from item.price
+                      if (item.discountPercent) {
+                        const base = parseFloat(item.price || '0');
+                        const discounted = base * (1 - (item.discountPercent || 0) / 100);
+                        return (discounted * item.quantity).toFixed(2);
+                      }
+                      return (parseFloat(item.price || '0') * item.quantity).toFixed(2);
+                    })()}
+                  </div>
                 </div>
               ))}
             </div>

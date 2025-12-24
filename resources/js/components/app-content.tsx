@@ -19,7 +19,9 @@ export function AppContent({
             className="mx-auto flex h-full w-full max-w-full lg:max-w-10xl flex-1 flex-col gap-4 rounded-xl"
             {...props}
         >
-            {children}
+            <div className="w-full h-full transform-gpu transition-all duration-300 ease-out animate-fade-in">
+                {children}
+            </div>
         </main>
     );
 }
