@@ -33,6 +33,7 @@ import { dashboard, products } from '@/routes';
 import { type BreadcrumbItem, type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { BookOpen, Folder, LayoutGrid, Menu, Search, ShoppingCart, Package, Wallet, UserCircle2 } from 'lucide-react';
+import ThemeToggleButton from '@/components/ui/theme-toggle';
 import AppLogo from './app-logo';
 import AppLogoIcon from './app-logo-icon';
 import { useCart } from '@/hooks/use-cart';
@@ -273,7 +274,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                     <div className="ml-auto flex items-center space-x-3">
                         {authUser && (
                             <div className="hidden text-sm text-gray-300 md:block">
-                                <span className="opacity-70 mr-1">Balance:</span>
+                                <span className="text-black dark:text-white opacity-70 mr-1">Balance:</span>
                                 <span className="font-semibold text-white">
                                     {authUser.wallet_balance?.toFixed
                                         ? authUser.wallet_balance.toFixed(2)
@@ -285,7 +286,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                         <div className="relative flex items-center space-x-1">
                             {/* Cart Icon */}
                             <Link href="/cart" className="relative flex items-center justify-center group rounded hover:bg-white/10 transition p-1">
-                                <ShoppingCart className="h-6 w-6 text-white opacity-80 group-hover:opacity-100" />
+                                <ShoppingCart className="h-6 w-6 text-black dark:text-white opacity-80 group-hover:opacity-100" />
                                 {itemCount > 0 && (
                                     <span className="absolute -top-0.5 -right-0.5 px-2 py-0.5 text-xs rounded-full bg-red-600 text-white font-bold" style={{fontSize:'10px'}}>{itemCount}</span>
                                 )}
@@ -297,6 +298,8 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                             >
                                 <Search className="!size-5 opacity-80 group-hover:opacity-100" />
                             </Button>
+                            {/* Theme toggle button placed next to other header controls */}
+                            <ThemeToggleButton />
                             {/* Removed rightNavItems from desktop navigation */}
                         </div>
                         

@@ -141,3 +141,40 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* Theme-adaptive overrides for literal color utilities
+   Map common hard-coded Tailwind utilities to CSS variables so
+   components that use `text-white`/`bg-white`/`text-black`/`bg-black`
+   follow the current theme without editing every file.
+*/
+.text-white,
+.text-black {
+    color: var(--foreground) !important;
+}
+
+.bg-white,
+.bg-black {
+    background-color: var(--background) !important;
+}
+
+.border-white,
+.border-black {
+    border-color: var(--border) !important;
+}
+
+.fill-white,
+.fill-black {
+    fill: var(--foreground) !important;
+}
+
+/* For icon strokes that use 'text-...' or direct color classes */
+.text-white > svg,
+.text-black > svg,
+.icon-adapt svg {
+    color: var(--foreground) !important;
+}
+
+/* Exceptions: force-white for elements that must remain white in all themes */
+.always-white {
+    color: #ffffff !important;
+}

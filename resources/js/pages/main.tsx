@@ -84,8 +84,10 @@ export default function Main() {
                         </div>
                         
                         {/* Sub-text revised for impact */}
-                        <div className="mb-8 text-lg text-gray-400 max-w-xl">
-                            Your collaborative hub for cutting-edge electronics. **Stop guessing, Start Building.** Get hands-on education and join a dedicated community of innovators.
+                        <div className="mb-8 text-lg text-gray-800/95 dark:text-gray-300/95 max-w-2xl leading-relaxed">
+                            <p className="mb-2">Electroteca is a collaborative hub for advanced electronics, combining practical labs with expert-led instruction.</p>
+                            <p className="mb-3 text-lg font-semibold text-red-600">Stop guessing. Start building.</p>
+                            <p>Gain hands-on training, project-based education, and connect with a community of committed innovators to accelerate your skills.</p>
                         </div>
                         
                         <Link
@@ -146,7 +148,7 @@ export default function Main() {
                                 >
                                     {/* Icon now receives the group-hover transition */}
                                     {v.icon}
-                                    <h3 className="text-xl font-semibold text-white mt-6 mb-2">{v.title}</h3>
+                                    <h3 className="text-xl font-semibold always-white mt-6 mb-2">{v.title}</h3>
                                     <p className="text-gray-300 text-base">{v.desc}</p>
                                 </div>
                             ))}
@@ -177,7 +179,7 @@ export default function Main() {
                                 <span className="block rounded-xl bg-red-600 p-2">
                                     <svg width="32" height="32" fill="currentColor" className="text-white" viewBox="0 0 20 20"><rect x="2" y="2" width="4" height="4" rx="1"/><rect x="8" y="2" width="4" height="4" rx="1"/><rect x="14" y="2" width="4" height="4" rx="1"/><rect x="2" y="8" width="4" height="4" rx="1"/><rect x="8" y="8" width="4" height="4" rx="1"/><rect x="14" y="8" width="4" height="4" rx="1"/><rect x="2" y="14" width="4" height="4" rx="1"/><rect x="8" y="14" width="4" height="4" rx="1"/><rect x="14" y="14" width="4" height="4" rx="1"/></svg>
                                 </span>
-                                <span className="text-xl text-white font-bold tracking-tight">Electroteca</span>
+                                <span className="text-xl text-white font-bold tracking-tight always-white">Electroteca</span>
                             </div>
                             <div className="text-gray-300 leading-relaxed">
                                 Studentilor Street 9/11, Chișinău, Moldova<br />
@@ -192,7 +194,7 @@ export default function Main() {
                             </div>
                         </div>
                         <div className="flex-1 text-gray-400 text-center md:text-right">
-                            <div className="mb-4 md:mb-2 text-xl text-white font-bold">Our Latest Innovations</div>
+                            <div className="mb-4 md:mb-2 text-xl text-white font-bold always-white">Our Latest Innovations</div>
                             <span className="inline-block mb-2">
                                 <Link href="#top" className="text-red-500 font-semibold hover:text-red-700">Back to top ↑</Link>
                             </span>

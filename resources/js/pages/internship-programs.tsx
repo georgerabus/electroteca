@@ -23,7 +23,7 @@ export default function InternshipPrograms() {
                             <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">
                                 Programul de <span className="text-red-600">Internship</span> Micro Lab
                             </h1>
-                            <p className="mt-4 text-lg text-gray-300">
+                            <p className="mt-4 text-lg text-gray-800/90 dark:text-gray-300/90">
                                 Rezolvă probleme reale cu soluții inginerești: IT, Electronică, Software, Automatizări, Mecatronică și mai mult.
                             </p>
                         </div>
@@ -57,7 +57,7 @@ export default function InternshipPrograms() {
                 {/* Why apply */}
                 <section className="bg-neutral-900 border-y border-neutral-800">
                     <div className="container mx-auto px-4 py-16">
-                        <h2 className="text-3xl font-bold mb-8">De ce merită să aplici?</h2>
+                        <h2 className="text-3xl font-bold mb-8 always-white">De ce merită să aplici?</h2>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <ReasonCard title="Networking" desc="Cunoști profesioniști din industrie și îți construiești conexiuni valoroase." />
                             <ReasonCard title="Dezvoltarea carierei" desc="Îți consolidezi CV-ul și abilitățile pentru a fi mai competitiv pe piața muncii." />
@@ -94,7 +94,7 @@ export default function InternshipPrograms() {
                         <h3 className="text-xl font-semibold text-gray-200 mb-6">Program realizat cu suportul partenerilor</h3>
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6 opacity-90">
                             {['USAID', 'Sweden', 'UTM', 'FabLab', 'AROBS', 'Mechatronics Center'].map((p) => (
-                                <div key={p} className="flex items-center justify-center rounded-lg border border-neutral-800 bg-black/40 px-3 py-6 text-gray-400">
+                                <div key={p} className="flex items-center justify-center rounded-lg border border-neutral-800 bg-black/40 px-3 py-6 text-white always-white">
                                     {p}
                                 </div>
                             ))}
@@ -126,7 +126,7 @@ function FeatureCard({ icon, title, desc }: { icon: React.ReactNode; title: stri
     return (
         <div className="rounded-2xl bg-neutral-900 border border-neutral-800 p-6">
             <div className="flex items-center gap-3 text-red-500">{icon}<span className="sr-only">{title}</span></div>
-            <h3 className="mt-3 text-lg font-semibold text-white">{title}</h3>
+            <h3 className="mt-3 text-lg font-semibold text-white always-white">{title}</h3>
             <p className="mt-2 text-gray-300">{desc}</p>
         </div>
     );
@@ -136,7 +136,7 @@ function ReasonCard({ title, desc }: { title: string; desc: string }) {
     return (
         <div className="rounded-2xl bg-black border border-neutral-800 p-6">
             <h4 className="text-lg font-semibold text-white">{title}</h4>
-            <p className="mt-2 text-gray-300">{desc}</p>
+            <p className="mt-2 text-gray-800/90 dark:text-gray-300/90">{desc}</p>
         </div>
     );
 }

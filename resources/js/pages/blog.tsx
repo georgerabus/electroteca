@@ -95,7 +95,7 @@ export default function Blog() {
                         <h1 className="text-4xl sm:text-5xl font-extrabold mb-4">
                             <span className="text-red-600">Electroteca</span> Blog
                         </h1>
-                        <p className="text-lg text-gray-300 max-w-2xl">
+                        <p className="text-lg text-gray-800/90 dark:text-gray-300/90 max-w-2xl">
                             Idei proaspete, tutoriale și noutăți din comunitatea noastră de electroniști și pasionați de tehnologie.
                         </p>
                     </div>
@@ -119,7 +119,20 @@ export default function Blog() {
 function ArticleCard({ post }: { post: Post }) {
     return (
         <article className="rounded-2xl bg-neutral-900 border border-neutral-800 p-6 flex flex-col">
-            <h3 className="text-xl font-bold text-white">{post.title}</h3>
+            <h3
+                className={`text-xl font-bold text-white ${[
+                    'health-monitoring',
+                    'energy-efficiency',
+                    'ev-innovation',
+                    'agro-bot',
+                    'drones-work',
+                    'future-agriculture',
+                ].includes(post.id)
+                    ? 'always-white'
+                    : ''}`}
+            >
+                {post.title}
+            </h3>
             <p className="mt-2 text-gray-300 flex-1">{post.excerpt}</p>
             <div className="mt-4 flex items-center justify-between text-gray-400 text-sm">
                 <span className="inline-flex items-center gap-2">

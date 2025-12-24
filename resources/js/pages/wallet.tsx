@@ -30,7 +30,7 @@ export default function Wallet({ wallet_balance, transactions }: WalletPageProps
                 <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-red-600/20 to-red-500/10 p-8 mb-6">
                     <div className="flex items-center justify-between">
                         <div>
-                            <div className="text-sm text-gray-400 mb-2">Current Balance</div>
+                            <div className="text-sm text-black dark:text-gray-300 font-medium mb-2">Current Balance</div>
                             <div className="text-4xl font-bold text-white flex items-center gap-2">
                                 <DollarSign className="h-8 w-8" />
                                 {wallet_balance} CR
@@ -51,7 +51,7 @@ export default function Wallet({ wallet_balance, transactions }: WalletPageProps
                         <Plus className="h-5 w-5" />
                         Add Credits
                     </h2>
-                    <p className="text-gray-400 mb-4">
+                    <p className="text-gray-800/90 dark:text-gray-300/90 mb-4">
                         Payment integration coming soon. For now, please contact an administrator to add credits to your wallet.
                     </p>
                     <div className="flex gap-3">

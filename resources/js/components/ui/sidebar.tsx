@@ -22,6 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import ThemeToggleButton from '@/components/ui/theme-toggle'
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -173,6 +174,7 @@ function Sidebar({
         )}
         {...props}
       >
+        <SidebarMenu /> {/* Ensure SidebarMenu is included here */}
         {children}
       </div>
     )
@@ -190,13 +192,12 @@ function Sidebar({
           data-slot="sidebar"
           data-mobile="true"
           className="bg-sidebar text-sidebar-foreground w-(--sidebar-width) p-0 [&>button]:hidden"
-          style={
-            {
-              "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
-            } as React.CSSProperties
-          }
+          style={{
+            "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
+          } as React.CSSProperties}
           side={side}
         >
+          <SidebarMenu /> {/* Ensure SidebarMenu is included here */}
           <div className="flex h-full w-full flex-col">{children}</div>
         </SheetContent>
       </Sheet>
@@ -237,6 +238,7 @@ function Sidebar({
         )}
         {...props}
       >
+        <SidebarMenu /> {/* Ensure SidebarMenu is included here */}
         <div
           data-sidebar="sidebar"
           className="bg-sidebar group-data-[variant=floating]:border-sidebar-border flex h-full w-full flex-col group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:shadow-sm"
@@ -453,8 +455,23 @@ function SidebarMenu({ className, ...props }: React.ComponentProps<"ul">) {
       data-sidebar="menu"
       className={cn("flex w-full min-w-0 flex-col gap-1", className)}
       {...props}
-    />
-  )
+    >
+      <li>
+        <div className="relative flex items-center space-x-1">
+          {/* Existing buttons */}
+          <button
+            data-slot="button"
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[color,box-shadow] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 outline-none focus-visible:ring focus-visible:ring-ring focus-visible:ring-offset-2 dark:focus-visible:ring-offset-dark"
+          >
+            {/* Example existing button */}
+          </button>
+
+          {/* Theme Toggle Button */}
+          <ThemeToggleButton />
+        </div>
+      </li>
+    </ul>
+  );
 }
 
 function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
@@ -540,97 +557,7 @@ function SidebarMenuButton({
   )
 }
 
-function SidebarMenuAction({
-  className,
-  asChild = false,
-  showOnHover = false,
-  ...props
-}: React.ComponentProps<"button"> & {
-  asChild?: boolean
-  showOnHover?: boolean
-}) {
-  const Comp = asChild ? Slot : "button"
-
-  return (
-    <Comp
-      data-slot="sidebar-menu-action"
-      data-sidebar="menu-action"
-      className={cn(
-        "text-sidebar-foreground ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground peer-hover/menu-button:text-sidebar-accent-foreground absolute top-1.5 right-1 flex aspect-square w-5 items-center justify-center rounded-md p-0 outline-hidden transition-transform focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
-        // Increases the hit area of the button on mobile.
-        "after:absolute after:-inset-2 md:after:hidden",
-        "peer-data-[size=sm]/menu-button:top-1",
-        "peer-data-[size=default]/menu-button:top-1.5",
-        "peer-data-[size=lg]/menu-button:top-2.5",
-        "group-data-[collapsible=icon]:hidden",
-        showOnHover &&
-          "peer-data-[active=true]/menu-button:text-sidebar-accent-foreground group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 md:opacity-0",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
-function SidebarMenuBadge({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="sidebar-menu-badge"
-      data-sidebar="menu-badge"
-      className={cn(
-        "text-sidebar-foreground pointer-events-none absolute right-1 flex h-5 min-w-5 items-center justify-center rounded-md px-1 text-xs font-medium tabular-nums select-none",
-        "peer-hover/menu-button:text-sidebar-accent-foreground peer-data-[active=true]/menu-button:text-sidebar-accent-foreground",
-        "peer-data-[size=sm]/menu-button:top-1",
-        "peer-data-[size=default]/menu-button:top-1.5",
-        "peer-data-[size=lg]/menu-button:top-2.5",
-        "group-data-[collapsible=icon]:hidden",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
-function SidebarMenuSkeleton({
-  className,
-  showIcon = false,
-  ...props
-}: React.ComponentProps<"div"> & {
-  showIcon?: boolean
-}) {
-  // Random width between 50 to 90%.
-  const width = React.useMemo(() => {
-    return `${Math.floor(Math.random() * 40) + 50}%`
-  }, [])
-
-  return (
-    <div
-      data-slot="sidebar-menu-skeleton"
-      data-sidebar="menu-skeleton"
-      className={cn("flex h-8 items-center gap-2 rounded-md px-2", className)}
-      {...props}
-    >
-      {showIcon && (
-        <Skeleton
-          className="size-4 rounded-md"
-          data-sidebar="menu-skeleton-icon"
-        />
-      )}
-      <Skeleton
-        className="h-4 max-w-(--skeleton-width) flex-1"
-        data-sidebar="menu-skeleton-text"
-        style={
-          {
-            "--skeleton-width": width,
-          } as React.CSSProperties
-        }
-      />
-    </div>
-  )
-}
+// ThemeToggleButton moved to a shared component `theme-toggle.tsx`
 
 function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
   return (
@@ -705,11 +632,10 @@ export {
   SidebarInput,
   SidebarInset,
   SidebarMenu,
-  SidebarMenuAction,
-  SidebarMenuBadge,
+  
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSkeleton,
+ 
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,

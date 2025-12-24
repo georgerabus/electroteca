@@ -122,8 +122,8 @@ export default function MyLoans({ loans }: MyLoansPageProps) {
                 {loans.length === 0 ? (
                     <div className="text-center my-24">
                         <div className="mb-4 text-4xl opacity-20">📦</div>
-                        <p className="mb-4 text-lg text-gray-300">You don't have any loans yet.</p>
-                        <Link href="/shop" className="rounded-xl px-6 py-3 bg-red-600 text-white font-semibold hover:bg-red-700 transition">
+                        <p className="mb-6 text-lg text-gray-300">You don't have any loans yet.</p>
+                        <Link href="/shop" className="mt-4 inline-block rounded-xl px-6 py-3 bg-red-600 text-white font-semibold hover:bg-red-700 transition">
                             Browse Products
                         </Link>
                     </div>

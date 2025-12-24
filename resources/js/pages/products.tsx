@@ -103,22 +103,22 @@ function ProductCard({ product }: { product: Product }) {
             </div>
             <div className="p-5">
                 {/* Title */}
-                <div className="mb-2">
-                    <h3 className="text-base leading-tight font-semibold text-white group-hover:text-red-400 transition">
+                    <div className="mb-2">
+                    <h3 className="text-base leading-tight font-semibold text-black dark:text-white group-hover:text-red-400 transition">
                         {product.name}
                     </h3>
                 </div>
                 {/* Price + stock aligned left */}
-                <div className="mb-2 flex items-center gap-3 text-sm">
-                    <div className="font-medium text-white">
+                    <div className="mb-2 flex items-center gap-3 text-sm">
+                    <div className="font-medium text-black dark:text-white">
                         {product.price} {product.currency}
                     </div>
-                    <div className="opacity-60 text-gray-400">Stock: {product.stock_quantity}</div>
+                    <div className="text-gray-700 dark:text-gray-300">Stock: {product.stock_quantity}</div>
                 </div>
-                <p className="mb-3 line-clamp-2 text-xs opacity-70 text-gray-300">
+                <p className="mb-3 line-clamp-2 text-xs text-gray-700 dark:text-gray-300">
                     {product.description}
                 </p>
-                <div className="mb-4 text-xs opacity-60 text-gray-400">
+                <div className="mb-4 text-xs text-gray-700 dark:text-gray-300">
                     Category: {product.category}
                 </div>
                 <div className="flex gap-2">

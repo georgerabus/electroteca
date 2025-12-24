@@ -140,10 +140,10 @@ export default function Dashboard({ loanRequests, products, filters }: Dashboard
             <div className="mx-auto max-w-[1200px] p-4 md:p-6">
                 {/* header */}
                 <div className="mb-4 flex items-center justify-between gap-3">
-                    <h1 className="text-2xl font-semibold tracking-tight">
+                    <h1 className="text-2xl font-semibold tracking-tight text-black dark:text-white">
                         Loans
                     </h1>
-                    <span className="hidden text-sm opacity-60 md:block">
+                    <span className="hidden text-sm text-black dark:text-white md:block">
                         {rows.length} result{rows.length === 1 ? '' : 's'}
                     </span>
                 </div>
@@ -180,7 +180,7 @@ export default function Dashboard({ loanRequests, products, filters }: Dashboard
                     <div className="max-h-[65vh] overflow-auto">
                         <table className="w-full text-left text-sm">
                             <thead className="sticky top-0 z-10 bg-black/50 backdrop-blur">
-                                <tr className="text-zinc-300">
+                                <tr className="text-black dark:text-white">
                                     <th className="px-5 py-4 font-medium">
                                         Status
                                     </th>
@@ -215,11 +215,11 @@ export default function Dashboard({ loanRequests, products, filters }: Dashboard
                                             </Badge>
                                         </td>
                                         <td className="px-5 py-4">
-                                            {r.product}
+                                            <div className="text-black dark:text-white font-medium">{r.product}</div>
                                         </td>
                                         <td className="px-5 py-4">
-                                            <div>{r.requester.name}</div>
-                                            <div className="text-xs opacity-60">
+                                            <div className="text-black dark:text-white">{r.requester.name}</div>
+                                            <div className="text-xs text-black dark:text-white">
                                                 {r.requester.email}
                                             </div>
                                         </td>
@@ -241,7 +241,7 @@ export default function Dashboard({ loanRequests, products, filters }: Dashboard
                                     <tr>
                                         <td
                                             colSpan={6}
-                                            className="px-5 py-12 text-center text-sm opacity-70"
+                                            className="px-5 py-12 text-center text-sm text-black dark:text-white"
                                         >
                                             No matches. Adjust filters or
                                             search.
@@ -253,7 +253,7 @@ export default function Dashboard({ loanRequests, products, filters }: Dashboard
                     </div>
 
                     {/* footer */}
-                    <div className="flex items-center justify-between border-t border-white/10 px-5 py-3 text-xs opacity-70">
+                    <div className="flex items-center justify-between border-t border-white/10 px-5 py-3 text-xs text-black dark:text-white">
                         <span>
                             {rows.length} result{rows.length === 1 ? '' : 's'}
                         </span>
@@ -264,7 +264,7 @@ export default function Dashboard({ loanRequests, products, filters }: Dashboard
                                 setProduct('All products');
                                 setQuery('');
                             }}
-                            className="rounded-full border border-white/10 px-3 py-1.5 hover:bg-white/5"
+                            className="rounded-full border border-white/10 px-3 py-1.5 hover:bg-white/5 text-black dark:text-white"
                         >
                             Clear filters
                         </button>
