@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CheckoutRequest;
+use App\Models\AuditLog;
 use App\Models\Product;
 use App\Services\LoanService;
 use Carbon\Carbon;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\WelcomeMail;
-use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 
 class CheckoutController extends Controller
@@ -38,7 +38,7 @@ class CheckoutController extends Controller
     /**
      * Process checkout (create loan requests for all cart items).
      */
-    public function store(Request $request)
+    public function store(CheckoutRequest $request)
     {
         $user = $request->user();
 
@@ -57,31 +57,19 @@ class CheckoutController extends Controller
             return back()->withErrors(['error' => 'You must verify your email before requesting loans. A verification email has been sent.'])->withInput();
         }
 
-        $validator = Validator::make($request->all(), [
-            'cart' => 'required|array|min:1',
-            'cart.*.id' => 'required|integer|exists:products,id',
-            'cart.*.quantity' => 'required|integer|min:1',
-            'period_from' => 'required|date|after_or_equal:today',
-            'period_to' => 'required|date|after:period_from',
-        ]);
+        $cart = $request->validated()['items'] ?? [];
+        $shippingAddress = $request->validated()['shipping_address'];
+        $notes = $request->validated()['notes'] ?? null;
 
-        if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput();
-        }
-
-        $cart = $request->cart;
-        $periodFrom = Carbon::parse($request->period_from);
-        $periodTo = Carbon::parse($request->period_to);
-
-        return DB::transaction(function () use ($user, $cart, $periodFrom, $periodTo) {
+        return DB::transaction(function () use ($user, $cart, $shippingAddress, $notes) {
             $loanRequests = [];
             $totalDeposit = 0;
             $errors = [];
 
             // First pass: Validate all items and calculate total deposit
             foreach ($cart as $item) {
-                $product = Product::findOrFail($item['id']);
-                $quantity = (int) $item['quantity'];
+                $product = Product::findOrFail($item['product_id']);
+                $quantity = (int)$item['quantity'];
 
                 // Check stock availability
                 if ($product->stock_quantity < $quantity) {
@@ -91,7 +79,7 @@ class CheckoutController extends Controller
 
                 // Check if user can borrow (for each item)
                 $check = $this->loanService->canBorrow($user, $product);
-                
+
                 if (!$check['can_borrow']) {
                     $errors[] = "{$product->name}: " . implode(', ', $check['reasons']);
                     continue;
@@ -105,7 +93,7 @@ class CheckoutController extends Controller
             // Validate total wallet balance before processing
             if ($user->wallet_balance < $totalDeposit) {
                 return back()->withErrors([
-                    'wallet' => "Insufficient wallet balance. Required: " . number_format($totalDeposit, 2) . " CR, Available: " . number_format($user->wallet_balance, 2) . " CR"
+                    'wallet' => "Insufficient wallet balance. Required: " . number_format($totalDeposit, 2) . " CR, Available: " . number_format($user->wallet_balance, 2) . " CR",
                 ])->withInput();
             }
 
@@ -116,8 +104,8 @@ class CheckoutController extends Controller
 
             // Second pass: Create loan requests (one per quantity)
             foreach ($cart as $item) {
-                $product = Product::findOrFail($item['id']);
-                $quantity = (int) $item['quantity'];
+                $product = Product::findOrFail($item['product_id']);
+                $quantity = (int)$item['quantity'];
 
                 // Create multiple loan requests based on quantity
                 for ($i = 0; $i < $quantity; $i++) {
@@ -125,11 +113,11 @@ class CheckoutController extends Controller
                         $loanRequest = $this->loanService->borrowProduct(
                             $user,
                             $product,
-                            $periodFrom,
-                            $periodTo,
-                            null
+                            Carbon::now(),
+                            Carbon::now()->addDays(30),
+                            $notes
                         );
-                        
+
                         $loanRequests[] = $loanRequest;
                     } catch (\Exception $e) {
                         $errors[] = "{$product->name} (item " . ($i + 1) . "): {$e->getMessage()}";
@@ -145,10 +133,25 @@ class CheckoutController extends Controller
                 return back()->withErrors(['cart' => 'No items could be borrowed'])->withInput();
             }
 
-            return redirect()->route('loans.my-loans')->with('success', 
+            // Audit log the checkout
+            AuditLog::create([
+                'user_id' => $user->id,
+                'action' => 'checkout',
+                'description' => "User completed checkout with " . count($loanRequests) . " items",
+                'model_type' => 'Checkout',
+                'model_id' => null,
+                'changes' => json_encode([
+                    'total_deposit' => $totalDeposit,
+                    'items_count' => count($loanRequests),
+                    'shipping_address' => substr($shippingAddress, 0, 50) . '...',
+                ]),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            return redirect()->route('loans.my-loans')->with('success',
                 'Loans approved successfully! Total amount: ' . number_format($totalDeposit, 2) . ' CR'
             );
         });
     }
-
 }
