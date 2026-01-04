@@ -1,5 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
-import { Head, Link } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import { Clock, User2 } from 'lucide-react';
 
 type Post = {
@@ -13,7 +13,11 @@ type Post = {
     href?: string;
 };
 
-const categories: Array<Post['category']> = ['All', 'Tutoriale', 'Articole Micro Lab'];
+const categories: Array<Post['category']> = [
+    'All',
+    'Tutoriale',
+    'Articole Micro Lab',
+];
 
 const posts: Post[] = [
     {
@@ -92,11 +96,13 @@ export default function Blog() {
                 {/* Hero */}
                 <section className="border-b border-neutral-800">
                     <div className="container mx-auto px-4 py-14">
-                        <h1 className="text-4xl sm:text-5xl font-extrabold mb-4">
-                            <span className="text-red-600">Electroteca</span> Blog
+                        <h1 className="mb-4 text-4xl font-extrabold sm:text-5xl">
+                            <span className="text-red-600">Electroteca</span>{' '}
+                            Blog
                         </h1>
-                        <p className="text-lg text-gray-800/90 dark:text-gray-300/90 max-w-2xl">
-                            Idei proaspete, tutoriale și noutăți din comunitatea noastră de electroniști și pasionați de tehnologie.
+                        <p className="max-w-2xl text-lg text-gray-800/90 dark:text-gray-300/90">
+                            Idei proaspete, tutoriale și noutăți din comunitatea
+                            noastră de electroniști și pasionați de tehnologie.
                         </p>
                     </div>
                 </section>
@@ -105,13 +111,13 @@ export default function Blog() {
 
                 {/* Posts grid */}
                 <section className="container mx-auto px-4 py-10">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {posts.map((post) => (
                             <ArticleCard key={post.id} post={post} />
                         ))}
                     </div>
                 </section>
-                
+
                 <hr className="border-t border-neutral-800" />
             </div>
         </AppLayout>
@@ -120,30 +126,32 @@ export default function Blog() {
 
 function ArticleCard({ post }: { post: Post }) {
     return (
-        <article className="rounded-2xl bg-neutral-900 border border-neutral-800 p-6 flex flex-col">
+        <article className="flex flex-col rounded-2xl border border-neutral-800 bg-neutral-900 p-6">
             <h3
-                className={`text-xl font-bold text-white ${[
-                    'health-monitoring',
-                    'energy-efficiency',
-                    'ev-innovation',
-                    'agro-bot',
-                    'drones-work',
-                    'future-agriculture',
-                ].includes(post.id)
-                    ? 'always-white'
-                    : ''}`}
+                className={`text-xl font-bold text-white ${
+                    [
+                        'health-monitoring',
+                        'energy-efficiency',
+                        'ev-innovation',
+                        'agro-bot',
+                        'drones-work',
+                        'future-agriculture',
+                    ].includes(post.id)
+                        ? 'always-white'
+                        : ''
+                }`}
             >
                 {post.title}
             </h3>
-            <p className="mt-2 text-gray-300 flex-1">{post.excerpt}</p>
-            <div className="mt-4 flex items-center justify-between text-gray-400 text-sm">
+            <p className="mt-2 flex-1 text-gray-300">{post.excerpt}</p>
+            <div className="mt-4 flex items-center justify-between text-sm text-gray-400">
                 <span className="inline-flex items-center gap-2">
                     <User2 className="h-4 w-4" />
                     {post.author}
                 </span>
                 <span>{post.date}</span>
             </div>
-            <div className="mt-2 inline-flex items-center gap-2 text-gray-400 text-sm">
+            <div className="mt-2 inline-flex items-center gap-2 text-sm text-gray-400">
                 <Clock className="h-4 w-4" />
                 {post.readTime}
             </div>
@@ -151,7 +159,7 @@ function ArticleCard({ post }: { post: Post }) {
                 href={post.href || '#'}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-4 inline-block rounded-lg bg-red-600 px-4 py-2 text-center font-semibold hover:bg-red-700 transition"
+                className="mt-4 inline-block rounded-lg bg-red-600 px-4 py-2 text-center font-semibold transition hover:bg-red-700"
             >
                 Citește mai mult
             </a>
