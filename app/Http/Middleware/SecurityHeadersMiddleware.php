@@ -15,6 +15,9 @@ class SecurityHeadersMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
+        $cspNonce = base64_encode(random_bytes(16));
+        $request->attributes->set('csp_nonce', $cspNonce);
+
         $response = $next($request);
 
         // Content Security Policy (CSP)
@@ -22,17 +25,19 @@ class SecurityHeadersMiddleware
         $isProduction = app()->environment('production');
 
         // Allow explicit overrides via environment variables (comma separated hosts)
-        $extraConnect = array_filter(array_map('trim', explode(',', env('CSP_CONNECT_SRC', ''))));
-        $extraImg = array_filter(array_map('trim', explode(',', env('CSP_IMG_SRC', ''))));
-        $allowDev = filter_var(env('CSP_ALLOW_DEV', app()->environment('local') ? 'true' : 'false'), FILTER_VALIDATE_BOOLEAN);
+        $extraConnect = array_filter(array_map('trim', explode(',', (string) config('security.csp.connect_src', ''))));
+        $extraImg = array_filter(array_map('trim', explode(',', (string) config('security.csp.img_src', ''))));
+        $allowDev = (bool) config('security.csp.allow_dev', false);
+        $allowInlineStyle = (bool) config('security.csp.allow_inline_style', false);
+
+        $scriptSrc = ["'self'", 'https://cdn.paddle.com', "'nonce-{$cspNonce}'"];
+        $styleSrc = ["'self'", 'https://fonts.bunny.net', 'https://cdn.paddle.com', "'nonce-{$cspNonce}'"];
 
         // Base directives
         $csp = [
             "default-src 'self'",
             // By default, do NOT include 'unsafe-inline' or 'unsafe-eval'.
             // Inline scripts/styles should be replaced with external files or nonces/hashes.
-            "script-src 'self' https://cdn.paddle.com",
-            "style-src 'self' https://fonts.bunny.net",
             "img-src 'self' data: https:",
             "font-src 'self' data: https://fonts.bunny.net",
             "frame-src https://checkout.paddle.com https://*.paddle.com",
@@ -79,19 +84,19 @@ class SecurityHeadersMiddleware
 
         // Development exceptions for inline/eval (only when explicitly allowed)
         if ($allowDev) {
-            // Append safe dev-only allowances for script/style necessary for local tooling
-            $csp = array_map(function ($directive) {
-                if (str_starts_with($directive, 'script-src')) {
-                    return $directive." 'unsafe-inline' 'unsafe-eval' http://localhost:5173 http://127.0.0.1:5173";
-                }
-
-                if (str_starts_with($directive, 'style-src')) {
-                    return $directive." 'unsafe-inline'";
-                }
-
-                return $directive;
-            }, $csp);
+            $scriptSrc[] = "'unsafe-inline'";
+            $scriptSrc[] = "'unsafe-eval'";
+            $scriptSrc[] = 'http://localhost:5173';
+            $scriptSrc[] = 'http://127.0.0.1:5173';
+            $styleSrc[] = "'unsafe-inline'";
         }
+
+        if ($allowInlineStyle && !in_array("'unsafe-inline'", $styleSrc, true)) {
+            $styleSrc[] = "'unsafe-inline'";
+        }
+
+        $csp[] = 'script-src '.implode(' ', $scriptSrc);
+        $csp[] = 'style-src '.implode(' ', $styleSrc);
 
         $response->headers->set('Content-Security-Policy', implode('; ', $csp));
 
