@@ -83,6 +83,10 @@ class PaymentController extends Controller
      */
     public function paddleWebhook(Request $request)
     {
+        if (!$this->verifyPaddleSignature($request)) {
+            return response()->json(['error' => 'Invalid Paddle signature'], 401);
+        }
+
         $result = $this->paymentService->handlePaddleWebhook($request->all());
         return response()->json($result);
     }
@@ -159,5 +163,45 @@ class PaymentController extends Controller
         return Inertia::render('wallet-topup-pending', [
             'payment' => $payment,
         ]);
+    }
+
+    private function verifyPaddleSignature(Request $request): bool
+    {
+        $secret = (string) config('services.paddle.webhook_secret');
+        if ($secret === '') {
+            return !app()->environment('production');
+        }
+
+        $signatureHeader = $request->header('Paddle-Signature');
+        if (!$signatureHeader) {
+            return false;
+        }
+
+        $parts = [];
+        foreach (explode(';', $signatureHeader) as $segment) {
+            $segment = trim($segment);
+            if ($segment === '') {
+                continue;
+            }
+            [$key, $value] = array_pad(explode('=', $segment, 2), 2, null);
+            if ($key && $value) {
+                $parts[$key] = $value;
+            }
+        }
+
+        $timestamp = $parts['ts'] ?? null;
+        $signature = $parts['h1'] ?? ($parts['v1'] ?? null);
+        if (!$timestamp || !$signature) {
+            return false;
+        }
+
+        if (abs(time() - (int) $timestamp) > 300) {
+            return false;
+        }
+
+        $signedPayload = $timestamp . ':' . $request->getContent();
+        $computed = hash_hmac('sha256', $signedPayload, $secret);
+
+        return hash_equals($computed, $signature);
     }
 }

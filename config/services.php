@@ -73,5 +73,6 @@ return [
         'environment' => env('PADDLE_ENVIRONMENT', 'sandbox'),
         'client_token' => env('PADDLE_CLIENT_TOKEN'),
         'checkout_url' => env('PADDLE_CHECKOUT_URL', env('APP_URL') . '/pay'),
+        'webhook_secret' => env('PADDLE_WEBHOOK'),
     ],
 ];
