@@ -292,23 +292,21 @@ class PaymentService
                 ],
             ];
 
-            $checkoutUrl = $data['checkout']['url'] ?? null;
-            logger()->info('PADDLE tx create response', [
-  'id' => $data['id'] ?? null,
-  'status' => $data['status'] ?? null,
-  'customer_id' => $data['customer_id'] ?? null,
-  'address_id' => $data['address_id'] ?? null,
-]);
-
-
             $data = $this->paddlePost('/transactions', $payload);
 
-  $txnId = $data['id'] ?? null;
-if (!$txnId) {
-    throw new Exception('Invalid Paddle response: missing data.id');
-}
+            logger()->info('PADDLE tx create response', [
+                'id' => $data['id'] ?? null,
+                'status' => $data['status'] ?? null,
+                'customer_id' => $data['customer_id'] ?? null,
+                'address_id' => $data['address_id'] ?? null,
+            ]);
 
-            $checkoutUrl = $data['checkout']['url'] ?? null;
+            $txnId = $data['id'] ?? null;
+            if (!$txnId) {
+                throw new Exception('Invalid Paddle response: missing data.id');
+            }
+
+            $checkoutUrl = $data['checkout']['url'] ?? null; 
 
             $payment = Payment::create([
                 'user_id' => $user->id,
@@ -330,9 +328,15 @@ if (!$txnId) {
 
             return [
                 'success' => true,
-                'transaction_id' => $txnId,             
+                'transaction_id' => $txnId,
+                'payment_id' => $payment->id,
             ];
         } catch (Exception $e) {
+            logger()->error('Wallet topup init failed', [
+                'user_id' => $user->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
@@ -441,8 +445,6 @@ if (!$txnId) {
     // -----------------------------
     // Helpers
     // -----------------------------
-
-use Illuminate\Support\Facades\Http;
 
 private function paddleBaseUrl(): string
 {
