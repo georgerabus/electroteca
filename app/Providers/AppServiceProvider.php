@@ -44,6 +44,7 @@ class AppServiceProvider extends ServiceProvider
 
         Inertia::share('paddle', [
             'clientToken' => config('services.paddle.client_token'),
+            'environment' => config('services.paddle.environment', 'sandbox'),
         ]);
     }
 }
