@@ -51,18 +51,20 @@ export default function Checkout({ items: serverItems, total: serverTotal, curre
     const walletBalance = serverWalletBalance ? parseFloat(serverWalletBalance) : (auth.user?.wallet_balance || 0);
 
     const { data, setData, post, processing, errors } = useForm({
-        cart: cart.map(item => ({
-            id: item.id,
+        items: cart.map(item => ({
+            product_id: item.id,
             quantity: item.quantity,
         })),
+        shipping_address: '',
         period_from: '',
         period_to: '',
+        notes: '',
     });
 
     // Update cart in form data whenever cart changes
     useEffect(() => {
-        setData('cart', cart.map(item => ({
-            id: item.id,
+        setData('items', cart.map(item => ({
+            product_id: item.id,
             quantity: item.quantity,
         })));
     }, [cart, setData]);
@@ -77,7 +79,19 @@ export default function Checkout({ items: serverItems, total: serverTotal, curre
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!data.period_from || !data.period_to) {
+        if (!data.shipping_address.trim()) {
+            alert('Please provide a shipping address');
+            return;
+        }
+
+        // Ensure cart is up to date
+        setData('items', cart.map(item => ({
+            product_id: item.id,
+            quantity: item.quantity,
+        })));
+
+        // Check if wallet has enough for full amount
+        if (walletBalance < total) {
             return;
         }
 
@@ -87,17 +101,6 @@ export default function Checkout({ items: serverItems, total: serverTotal, curre
         if (toDate <= fromDate) {
             return;
         }
-
-        // Check if wallet has enough for full amount
-        if (walletBalance < total) {
-            return;
-        }
-
-        // Ensure cart is up to date
-        setData('cart', cart.map(item => ({
-            id: item.id,
-            quantity: item.quantity,
-        })));
 
         post('/checkout', {
             onSuccess: () => {
@@ -246,6 +249,23 @@ export default function Checkout({ items: serverItems, total: serverTotal, curre
                             <div className="space-y-4 mb-6">
                                 <div>
                                     <label className="block text-sm text-gray-300 mb-1">
+                                        Shipping Address <span className="text-red-400">*</span>
+                                    </label>
+                                    <textarea
+                                        value={data.shipping_address}
+                                        onChange={(e) => setData('shipping_address', e.target.value)}
+                                        placeholder="Enter your shipping address..."
+                                        rows={3}
+                                        required
+                                        className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-white/20 focus:outline-none"
+                                    />
+                                    {errors.shipping_address && (
+                                        <p className="mt-1 text-xs text-red-400">{errors.shipping_address}</p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm text-gray-300 mb-1">
                                         From Date <span className="text-red-400">*</span>
                                     </label>
                                     <input
@@ -278,6 +298,22 @@ export default function Checkout({ items: serverItems, total: serverTotal, curre
                                     )}
                                 </div>
 
+                                <div>
+                                    <label className="block text-sm text-gray-300 mb-1">
+                                        Notes (optional)
+                                    </label>
+                                    <textarea
+                                        value={data.notes}
+                                        onChange={(e) => setData('notes', e.target.value)}
+                                        placeholder="Any additional information..."
+                                        rows={2}
+                                        className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-white/20 focus:outline-none"
+                                    />
+                                    {errors.notes && (
+                                        <p className="mt-1 text-xs text-red-400">{errors.notes}</p>
+                                    )}
+                                </div>
+
                                 <div className="p-3 rounded-lg bg-blue-500/20 border border-blue-500/50 text-sm text-blue-400">
                                     <strong>Note:</strong> The full amount will be deducted from your wallet when you request the loan. The amount will be refunded when you return the items.
                                 </div>
@@ -285,9 +321,9 @@ export default function Checkout({ items: serverItems, total: serverTotal, curre
 
                             <button
                                 type="submit"
-                                disabled={processing || insufficientBalance || items.length === 0 || !data.period_from || !data.period_to}
+                                disabled={processing || insufficientBalance || items.length === 0 || !data.period_from || !data.period_to || !data.shipping_address.trim()}
                                 className={`w-full rounded-xl px-6 py-4 font-semibold text-white text-lg transition ${
-                                    processing || insufficientBalance || items.length === 0 || !data.period_from || !data.period_to
+                                    processing || insufficientBalance || items.length === 0 || !data.period_from || !data.period_to || !data.shipping_address.trim()
                                         ? 'bg-gray-600 cursor-not-allowed opacity-60'
                                         : 'bg-red-600 hover:bg-red-700'
                                 }`}

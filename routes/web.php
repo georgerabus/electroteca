@@ -8,6 +8,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\LoanController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\WalletController;
+use App\Http\Controllers\PaymentController;
 
 // Route::get('/', function () {
 //     return Inertia::render('welcome');
@@ -60,6 +61,22 @@ Route::middleware(['auth', 'require.2fa'])->group(function () {
 
     // Wallet routes
     Route::get('wallet', [WalletController::class, 'index'])->name('wallet');
+    Route::get('wallet/balance', [WalletController::class, 'balance'])->name('wallet.balance');
+    Route::get('wallet/history', [WalletController::class, 'history'])->name('wallet.history');
+
+    // Payment routes
+    Route::prefix('payment')->name('payment.')->group(function () {
+        Route::post('initiate', [PaymentController::class, 'initiate'])->name('initiate');
+        Route::get('success', [PaymentController::class, 'success'])->name('success');
+        Route::get('cancel', [PaymentController::class, 'cancel'])->name('cancel');
+        Route::get('status/{payment}', [PaymentController::class, 'status'])->name('status');
+    });
+
+    // Wallet top-up routes
+    Route::prefix('wallet-topup')->name('wallet.topup-')->group(function () {
+        Route::post('initiate', [PaymentController::class, 'initiateWalletTopup'])->name('initiate');
+        Route::get('success', [PaymentController::class, 'walletTopupSuccess'])->name('success');
+    });
 });
 
 Route::middleware(['auth', 'verified', 'require.2fa'])->group(function () {
@@ -81,6 +98,9 @@ Route::middleware(['auth', 'verified', 'require.2fa'])->group(function () {
             Route::post('loans/{loanRequest}/reject', [AdminController::class, 'rejectLoan'])->name('loans.reject');
             Route::post('loans/{loanRequest}/picked-up', [AdminController::class, 'markAsPickedUp'])->name('loans.picked-up');
             Route::post('loans/{loanRequest}/approve-return', [AdminController::class, 'approveReturn'])->name('loans.approve-return');
+            
+            // Payment management
+            Route::post('payments/{payment}/refund', [PaymentController::class, 'refund'])->name('payments.refund');
         });
 });
 
@@ -89,6 +109,9 @@ Route::middleware(['auth', 'verified', 'require.2fa'])->group(function () {
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
+
+// Webhooks (public, no auth required)
+Route::post('webhooks/paddle', [PaymentController::class, 'paddleWebhook'])->name('webhooks.paddle');
 
 // Serve sitemap through Laravel so middleware (CSP) is applied even when using php's built-in server
 Route::get('sitemap.xml', function () {

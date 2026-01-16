@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Product;
 use App\Services\LoanService;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\WelcomeMail;
@@ -60,8 +61,10 @@ class CheckoutController extends Controller
         $cart = $request->validated()['items'] ?? [];
         $shippingAddress = $request->validated()['shipping_address'];
         $notes = $request->validated()['notes'] ?? null;
+        $periodFrom = Carbon::createFromFormat('Y-m-d', $request->validated()['period_from']);
+        $periodTo = Carbon::createFromFormat('Y-m-d', $request->validated()['period_to']);
 
-        return DB::transaction(function () use ($user, $cart, $shippingAddress, $notes) {
+        return DB::transaction(function () use ($user, $cart, $shippingAddress, $notes, $periodFrom, $periodTo, $request) {
             $loanRequests = [];
             $totalDeposit = 0;
             $errors = [];
@@ -113,8 +116,8 @@ class CheckoutController extends Controller
                         $loanRequest = $this->loanService->borrowProduct(
                             $user,
                             $product,
-                            Carbon::now(),
-                            Carbon::now()->addDays(30),
+                            $periodFrom,
+                            $periodTo,
                             $notes
                         );
 

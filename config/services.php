@@ -68,4 +68,9 @@ return [
         'authority' => env('AZURE_AUTHORITY', 'https://login.microsoftonline.com'),
     ],
 
+    'paddle' => [
+        'key' => env('PADDLE_KEY'),
+        'environment' => env('PADDLE_ENVIRONMENT', 'sandbox'),
+    ],
+
 ];

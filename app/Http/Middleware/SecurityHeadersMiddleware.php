@@ -32,9 +32,9 @@ class SecurityHeadersMiddleware
             // By default, do NOT include 'unsafe-inline' or 'unsafe-eval'.
             // Inline scripts/styles should be replaced with external files or nonces/hashes.
             "script-src 'self'",
-            "style-src 'self'",
+            "style-src 'self' https://fonts.bunny.net",
             "img-src 'self' data: https:",
-            "font-src 'self' data:",
+            "font-src 'self' data: https://fonts.bunny.net",
             "frame-ancestors 'none'",
             "base-uri 'self'",
             "form-action 'self'",

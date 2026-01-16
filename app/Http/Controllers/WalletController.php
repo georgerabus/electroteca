@@ -3,11 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\WalletTransaction;
+use App\Services\WalletService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class WalletController extends Controller
 {
+    public function __construct(
+        private WalletService $walletService
+    ) {
+    }
+
     /**
      * Show wallet page with balance and transactions.
      */
@@ -34,8 +40,38 @@ class WalletController extends Controller
             });
 
         return Inertia::render('wallet', [
-            'wallet_balance' => number_format($user->wallet_balance, 2),
+            'wallet_balance' => number_format($user->wallet_balance ?? 0, 2),
             'transactions' => $transactions,
+        ]);
+    }
+
+    /**
+     * Get wallet balance (API)
+     */
+    public function balance(Request $request)
+    {
+        $user = $request->user();
+
+        return response()->json([
+            'balance' => $this->walletService->getBalance($user),
+            'formatted_balance' => number_format($this->walletService->getBalance($user), 2),
+            'currency' => 'credits',
+        ]);
+    }
+
+    /**
+     * Get transaction history (API)
+     */
+    public function history(Request $request)
+    {
+        $user = $request->user();
+        $limit = $request->input('limit', 50);
+
+        $transactions = $this->walletService->getTransactionHistory($user, $limit);
+
+        return response()->json([
+            'transactions' => $transactions,
+            'total' => count($transactions),
         ]);
     }
 }

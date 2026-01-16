@@ -1,8 +1,9 @@
 import AppLayout from '@/layouts/app-layout';
-import { Head, Link } from '@inertiajs/react';
-import { DollarSign, ArrowUp, ArrowDown, History, Plus } from 'lucide-react';
+import { Head, Link, router } from '@inertiajs/react';
+import { DollarSign, ArrowUp, ArrowDown, History, Plus, Loader } from 'lucide-react';
 import { usePage } from '@inertiajs/react';
 import { type SharedData } from '@/types';
+import { useState } from 'react';
 
 type Transaction = {
     id: number;
@@ -19,6 +20,47 @@ type WalletPageProps = {
 
 export default function Wallet({ wallet_balance, transactions }: WalletPageProps) {
     const { auth } = usePage<SharedData>().props;
+    const [showAddCredits, setShowAddCredits] = useState(false);
+    const [amount, setAmount] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleAddCredits = async () => {
+        if (!amount || parseFloat(amount) <= 0) {
+            setError('Please enter a valid amount');
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+
+        try {
+            const response = await fetch('/wallet-topup/initiate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({
+                    amount: parseFloat(amount),
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.success && data.url) {
+                // Redirect to Paddle checkout
+                window.location.href = data.url;
+            } else {
+                setError(data.error || 'Failed to initiate payment');
+            }
+        } catch (err) {
+            setError('An error occurred. Please try again.');
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <AppLayout breadcrumbs={[{ title: 'Shop', href: '/shop' }, { title: 'Wallet', href: '/wallet' }]}>
@@ -52,14 +94,14 @@ export default function Wallet({ wallet_balance, transactions }: WalletPageProps
                         Add Credits
                     </h2>
                     <p className="text-gray-800/90 dark:text-gray-300/90 mb-4">
-                        Payment integration coming soon. For now, please contact an administrator to add credits to your wallet.
+                        Add credits to your wallet using Paddle secure payment.
                     </p>
                     <div className="flex gap-3">
                         <button
-                            disabled
+                            onClick={() => setShowAddCredits(true)}
                             className="rounded-xl bg-red-600 px-6 py-3 font-semibold text-white hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Add Credits (Coming Soon)
+                            Add Credits
                         </button>
                         <Link
                             href="/contact"
@@ -132,6 +174,81 @@ export default function Wallet({ wallet_balance, transactions }: WalletPageProps
                         View Cart
                     </Link>
                 </div>
+
+                {/* Add Credits Modal */}
+                {showAddCredits && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-gray-900 rounded-2xl border border-white/10 p-8 max-w-md w-full">
+                            <h3 className="text-2xl font-bold mb-4">Add Credits to Your Wallet</h3>
+                            
+                            {error && (
+                                <div className="mb-4 p-4 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400 text-sm">
+                                    {error}
+                                </div>
+                            )}
+
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    Amount (CR)
+                                </label>
+                                <div className="flex items-center">
+                                    <span className="text-gray-400 mr-2">$</span>
+                                    <input
+                                        type="number"
+                                        value={amount}
+                                        onChange={(e) => setAmount(e.target.value)}
+                                        placeholder="0.00"
+                                        min="0.01"
+                                        step="0.01"
+                                        disabled={loading}
+                                        className="flex-1 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 disabled:opacity-50"
+                                    />
+                                    <span className="text-gray-400 ml-2">CR</span>
+                                </div>
+                                <p className="text-xs text-gray-400 mt-2">Minimum: $0.01</p>
+                            </div>
+
+                            {/* Quick amounts */}
+                            <div className="mb-6">
+                                <p className="text-xs text-gray-400 mb-2">Quick amounts:</p>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {['10', '25', '50', '100'].map((preset) => (
+                                        <button
+                                            key={preset}
+                                            onClick={() => setAmount(preset)}
+                                            disabled={loading}
+                                            className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm hover:bg-white/10 transition disabled:opacity-50"
+                                        >
+                                            ${preset}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => {
+                                        setShowAddCredits(false);
+                                        setAmount('');
+                                        setError('');
+                                    }}
+                                    disabled={loading}
+                                    className="flex-1 px-4 py-2 rounded-lg border border-white/20 text-white hover:bg-white/5 transition disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleAddCredits}
+                                    disabled={loading || !amount}
+                                    className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {loading && <Loader className="h-4 w-4 animate-spin" />}
+                                    {loading ? 'Processing...' : 'Continue to Payment'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </AppLayout>
     );

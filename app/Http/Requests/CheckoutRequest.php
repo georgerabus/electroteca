@@ -26,6 +26,8 @@ class CheckoutRequest extends FormRequest
             'items.*.product_id' => 'required|integer|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1|max:100',
             'shipping_address' => 'required|string|min:5|max:500',
+            'period_from' => 'required|date_format:Y-m-d|after_or_equal:today',
+            'period_to' => 'required|date_format:Y-m-d|after:period_from',
             'notes' => 'nullable|string|max:1000',
         ];
     }
@@ -39,6 +41,12 @@ class CheckoutRequest extends FormRequest
             'items.*.quantity.min' => 'Quantity must be at least 1.',
             'shipping_address.required' => 'Shipping address is required.',
             'shipping_address.min' => 'Shipping address must be at least 5 characters.',
+            'period_from.required' => 'Start date is required.',
+            'period_from.date_format' => 'Start date must be a valid date.',
+            'period_from.after_or_equal' => 'Start date must be today or in the future.',
+            'period_to.required' => 'End date is required.',
+            'period_to.date_format' => 'End date must be a valid date.',
+            'period_to.after' => 'End date must be after the start date.',
         ];
     }
 }
