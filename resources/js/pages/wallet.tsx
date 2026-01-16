@@ -3,7 +3,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { DollarSign, ArrowUp, ArrowDown, History, Plus, Loader } from 'lucide-react';
 import { usePage } from '@inertiajs/react';
 import { type SharedData } from '@/types';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import axios from 'axios';
 
 declare global {
@@ -23,6 +23,12 @@ type Transaction = {
 type WalletPageProps = {
     wallet_balance: string;
     transactions: Transaction[];
+};
+
+let paddleEventHandler: ((event: any) => void) | null = null;
+
+const setPaddleEventHandler = (handler: ((event: any) => void) | null) => {
+  paddleEventHandler = handler;
 };
 
 const loadPaddle = () =>
@@ -115,6 +121,9 @@ const initPaddleOnce = (() => {
         token: clientToken, // test_...
         eventCallback: (event: any) => {
           console.log('[Paddle event]', event);
+          if (paddleEventHandler) {
+            paddleEventHandler(event);
+          }
         },
         checkout: {
           settings: {
@@ -139,6 +148,30 @@ export default function Wallet({ wallet_balance, transactions }: WalletPageProps
 
     const { props } = usePage<any>();
     const paddleClientToken = props?.paddle?.clientToken;
+
+    useEffect(() => {
+        const handlePaddleEvent = (event: any) => {
+            const eventName = String(
+                event?.name ?? event?.type ?? event?.event_type ?? event?.event?.type ?? ''
+            ).toLowerCase();
+
+            if (eventName === 'checkout.completed' || eventName === 'transaction.completed') {
+                setShowAddCredits(false);
+                setAmount('');
+                setError('');
+                setLoading(false);
+
+                setTimeout(() => {
+                    router.reload({ only: ['wallet_balance', 'transactions'] });
+                }, 1200);
+            }
+        };
+
+        setPaddleEventHandler(handlePaddleEvent);
+        return () => {
+            setPaddleEventHandler(null);
+        };
+    }, []);
 
     const handleAddCredits = async () => {
     setLoading(true);
@@ -375,4 +408,3 @@ window.Paddle.Checkout.open({ transactionId: txnId }); // :contentReference[oaic
         </>
     );
 }
-
