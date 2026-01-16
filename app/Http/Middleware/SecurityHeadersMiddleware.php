@@ -32,6 +32,8 @@ class SecurityHeadersMiddleware
 
         $scriptSrc = ["'self'", 'https://cdn.paddle.com', "'nonce-{$cspNonce}'"];
         $styleSrc = ["'self'", 'https://fonts.bunny.net', 'https://cdn.paddle.com', "'nonce-{$cspNonce}'"];
+        $styleSrcElem = null;
+        $styleSrcAttr = null;
 
         // Base directives
         $csp = [
@@ -91,12 +93,19 @@ class SecurityHeadersMiddleware
             $styleSrc[] = "'unsafe-inline'";
         }
 
-        if ($allowInlineStyle && !in_array("'unsafe-inline'", $styleSrc, true)) {
-            $styleSrc[] = "'unsafe-inline'";
+        if ($allowInlineStyle) {
+            $styleSrcElem = ["'self'", 'https://fonts.bunny.net', 'https://cdn.paddle.com', "'unsafe-inline'"];
+            $styleSrcAttr = ["'unsafe-inline'"];
         }
 
         $csp[] = 'script-src '.implode(' ', $scriptSrc);
         $csp[] = 'style-src '.implode(' ', $styleSrc);
+        if ($styleSrcElem) {
+            $csp[] = 'style-src-elem '.implode(' ', $styleSrcElem);
+        }
+        if ($styleSrcAttr) {
+            $csp[] = 'style-src-attr '.implode(' ', $styleSrcAttr);
+        }
 
         $response->headers->set('Content-Security-Policy', implode('; ', $csp));
 
