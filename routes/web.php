@@ -110,9 +110,6 @@ Route::middleware(['auth', 'verified', 'require.2fa'])->group(function () {
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
 
-// Webhooks (public, no auth required)
-Route::post('webhooks/paddle', [PaymentController::class, 'paddleWebhook'])->name('webhooks.paddle');
-
 // Serve sitemap through Laravel so middleware (CSP) is applied even when using php's built-in server
 Route::get('sitemap.xml', function () {
     $path = public_path('sitemap.xml');
@@ -130,3 +127,6 @@ use App\Http\Controllers\Auth\VerificationController;
 Route::get('email/verify/{id}/{hash}', [VerificationController::class, 'verify'])
     ->name('verification.verify')
     ->middleware('signed');
+
+
+Route::get('/pay', fn () => view('paddle-pay'))->name('paddle.pay');

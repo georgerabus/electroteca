@@ -31,17 +31,18 @@ class SecurityHeadersMiddleware
             "default-src 'self'",
             // By default, do NOT include 'unsafe-inline' or 'unsafe-eval'.
             // Inline scripts/styles should be replaced with external files or nonces/hashes.
-            "script-src 'self'",
+            "script-src 'self' https://cdn.paddle.com",
             "style-src 'self' https://fonts.bunny.net",
             "img-src 'self' data: https:",
             "font-src 'self' data: https://fonts.bunny.net",
+            "frame-src https://checkout.paddle.com https://*.paddle.com",
             "frame-ancestors 'none'",
             "base-uri 'self'",
             "form-action 'self'",
         ];
 
         // connect-src: allow self plus any explicitly configured backends/CDNs
-        $connectSrc = ["'self'"];
+        $connectSrc = ["'self'", 'https://api.paddle.com', 'https://*.paddle.com'];
         // If in production, allow only https hostnames and configured extras
         if ($isProduction) {
             // Optionally allow https: for remote APIs (if specified via env, list domains explicitly)

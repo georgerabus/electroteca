@@ -4,6 +4,13 @@ import { DollarSign, ArrowUp, ArrowDown, History, Plus, Loader } from 'lucide-re
 import { usePage } from '@inertiajs/react';
 import { type SharedData } from '@/types';
 import { useState } from 'react';
+import axios from 'axios';
+
+declare global {
+  interface Window {
+    Paddle?: any;
+  }
+}
 
 type Transaction = {
     id: number;
@@ -18,6 +25,111 @@ type WalletPageProps = {
     transactions: Transaction[];
 };
 
+const loadPaddle = () =>
+  new Promise<void>((resolve, reject) => {
+    // If Paddle is already loaded, resolve immediately
+    if (window.Paddle) {
+      return resolve();
+    }
+
+    // Check if script is already in DOM
+    const existing = document.querySelector('script[src="https://cdn.paddle.com/paddle/v2/paddle.js"]');
+    if (existing) {
+      // If script exists and Paddle is available, resolve
+      if (window.Paddle) {
+        return resolve();
+      }
+      
+      // Otherwise wait for the load event
+      const onLoad = () => {
+        existing.removeEventListener('load', onLoad);
+        if (window.Paddle) {
+          resolve();
+        } else {
+          reject(new Error('Paddle.js script loaded but window.Paddle not available'));
+        }
+      };
+      existing.addEventListener('load', onLoad);
+      return;
+    }
+
+    // Create and inject the script
+    const s = document.createElement('script');
+    s.src = 'https://cdn.paddle.com/paddle/v2/paddle.js';
+    s.async = true;
+    s.charset = 'utf-8';
+    
+    let timeoutId: NodeJS.Timeout;
+    
+    const cleanup = () => {
+      clearTimeout(timeoutId);
+      s.removeEventListener('load', onLoad);
+      s.removeEventListener('error', onError);
+    };
+    
+    const onLoad = () => {
+      cleanup();
+      if (window.Paddle) {
+        resolve();
+      } else {
+        reject(new Error('Paddle.js script loaded but window.Paddle is not defined'));
+      }
+    };
+    
+    const onError = (error: Event | string) => {
+      cleanup();
+      const message = typeof error === 'string' ? error : 'Failed to load Paddle.js from CDN';
+      console.error('[Paddle Loading Error]', message);
+      reject(new Error(message));
+    };
+    
+    s.onload = onLoad;
+    s.onerror = () => onError('Failed to fetch Paddle.js script');
+    
+    // Set a timeout as fallback (10 seconds)
+    timeoutId = setTimeout(() => {
+      if (!window.Paddle) {
+        cleanup();
+        reject(new Error('Paddle.js loading timeout - took longer than 10 seconds'));
+      }
+    }, 10000);
+    
+    document.body.appendChild(s);
+  });
+
+const initPaddleOnce = (() => {
+  let inited = false;
+
+  return async (clientToken: string) => {
+    await loadPaddle();
+
+    if (!window.Paddle) {
+      throw new Error('Paddle.js not available after loading script');
+    }
+
+    if (!inited) {
+      // IMPORTANT: default e production dacă nu setezi sandbox
+      window.Paddle.Environment.set('sandbox'); // :contentReference[oaicite:2]{index=2}
+
+      window.Paddle.Initialize({
+        token: clientToken, // test_...
+        eventCallback: (event: any) => {
+          console.log('[Paddle event]', event);
+        },
+        checkout: {
+          settings: {
+            displayMode: 'overlay',
+          },
+        },
+      }); // :contentReference[oaicite:3]{index=3}
+
+      inited = true;
+    }
+  };
+})();
+
+
+
 export default function Wallet({ wallet_balance, transactions }: WalletPageProps) {
     const { auth } = usePage<SharedData>().props;
     const [showAddCredits, setShowAddCredits] = useState(false);
@@ -25,41 +137,48 @@ export default function Wallet({ wallet_balance, transactions }: WalletPageProps
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    const { props } = usePage<any>();
+    const paddleClientToken = props?.paddle?.clientToken;
+
     const handleAddCredits = async () => {
-        if (!amount || parseFloat(amount) <= 0) {
-            setError('Please enter a valid amount');
-            return;
+    setLoading(true);
+    setError('');
+
+    try {
+        if (!paddleClientToken) {
+        console.error('[Paddle Wallet] Missing Paddle client token in Inertia props');
+        throw new Error('Missing Paddle client token - please check server configuration');
         }
 
-        setLoading(true);
-        setError('');
+        console.log('[Paddle Wallet] Initializing Paddle.js...');
+        
+        // 1) init Paddle.js
+        await initPaddleOnce(paddleClientToken);
+        console.log('[Paddle Wallet] Paddle.js initialized successfully');
 
-        try {
-            const response = await fetch('/wallet-topup/initiate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                },
-                body: JSON.stringify({
-                    amount: parseFloat(amount),
-                }),
-            });
+        // 2) create transaction on backend
+        console.log('[Paddle Wallet] Initiating wallet topup with amount:', amount);
+        const res = await axios.post('/wallet-topup/initiate', {
+        amount: Number(amount),
+        });
 
-            const data = await response.json();
+const txnId = res.data?.transaction_id ?? res.data?.paddle_transaction_id ?? res.data?.id;
+if (!txnId) throw new Error('Backend did not return transaction id');
 
-            if (data.success && data.url) {
-                // Redirect to Paddle checkout
-                window.location.href = data.url;
-            } else {
-                setError(data.error || 'Failed to initiate payment');
-            }
-        } catch (err) {
-            setError('An error occurred. Please try again.');
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
+
+        console.log('[Paddle Wallet] Transaction created, ID:', txnId);
+
+        // 3) open checkout overlay
+        console.log('[Paddle Wallet] Opening Paddle checkout for transaction:', txnId);
+window.Paddle.Checkout.open({ transactionId: txnId }); // :contentReference[oaicite:4]{index=4}
+
+    } catch (e: any) {
+        const errorMessage = e?.response?.data?.error ?? e?.message ?? 'Payment failed';
+        console.error('[Paddle Wallet] Error:', errorMessage, e);
+        setError(errorMessage);
+    } finally {
+        setLoading(false);
+    }
     };
 
     return (

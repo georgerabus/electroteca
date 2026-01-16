@@ -2,13 +2,14 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Auth\Events\Registered;
+use Inertia\Inertia;
 use App\Mail\WelcomeMail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -40,5 +41,9 @@ class AppServiceProvider extends ServiceProvider
                 ]);
             }
         });
+
+        Inertia::share('paddle', [
+            'clientToken' => config('services.paddle.client_token'),
+        ]);
     }
 }

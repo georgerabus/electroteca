@@ -2,25 +2,20 @@
 
 namespace App\Services;
 
-use Exception;
-use App\Models\User;
 use App\Models\Order;
 use App\Models\Payment;
-use Illuminate\Support\Facades\Cache;
+use App\Models\User;
+use Exception;
+use Illuminate\Support\Facades\Http;
 
 class PaymentService
 {
-    private WalletService $walletService;
-
-    public function __construct(WalletService $walletService)
-    {
-        $this->walletService = $walletService;
-    }
+    public function __construct(
+        private WalletService $walletService
+    ) {}
 
     /**
-     * Initialize payment - can be wallet only, paddle only, or hybrid
-     * $paymentMethod can be: 'paddle', 'wallet', or 'hybrid'
-     * For hybrid: pass array with 'use_wallet' => true/amount
+     * Entry point: wallet only, paddle only, or hybrid.
      */
     public function initializePayment(
         User $user,
@@ -28,19 +23,19 @@ class PaymentService
         string $paymentMethod = 'paddle',
         array $options = []
     ): array {
-        // Determine how to handle the payment
         if ($paymentMethod === 'wallet') {
             return $this->initializeWalletPayment($user, $order);
-        } elseif ($paymentMethod === 'hybrid') {
+        }
+
+        if ($paymentMethod === 'hybrid') {
             return $this->initializeHybridPayment($user, $order, $options);
         }
 
-        // Default to paddle
         return $this->initializePaddlePayment($user, $order);
     }
 
     /**
-     * Initialize wallet-only payment
+     * Wallet-only payment.
      */
     private function initializeWalletPayment(User $user, Order $order): array
     {
@@ -54,12 +49,10 @@ class PaymentService
                 ];
             }
 
-            // Deduct from wallet
             $this->walletService->deductCredits($user, $order->total_amount, 'purchase', [
                 'order_id' => $order->id,
             ]);
 
-            // Create payment record with wallet as method
             $payment = Payment::create([
                 'user_id' => $user->id,
                 'order_id' => $order->id,
@@ -78,7 +71,6 @@ class PaymentService
                 ],
             ]);
 
-            // Mark order as completed
             $order->update(['status' => 'completed']);
 
             return [
@@ -89,37 +81,34 @@ class PaymentService
                 'new_balance' => $this->walletService->getBalance($user),
             ];
         } catch (Exception $e) {
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-            ];
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 
     /**
-     * Initialize hybrid payment (wallet + paddle)
-     * $options should contain wallet_amount to use, rest paid via paddle
+     * Hybrid payment (wallet + paddle).
+     *
+     * IMPORTANT: Paddle charges based on items you send.
+     * For hybrid, this implementation charges a SINGLE line item for the remaining balance.
      */
     private function initializeHybridPayment(User $user, Order $order, array $options = []): array
     {
         try {
             $walletAmount = min(
-                $options['wallet_amount'] ?? $this->walletService->getBalance($user),
-                $order->total_amount
+                (float) ($options['wallet_amount'] ?? $this->walletService->getBalance($user)),
+                (float) $order->total_amount
             );
 
-            if ($walletAmount < 0) {
-                $walletAmount = 0;
-            }
+            if ($walletAmount < 0) $walletAmount = 0;
 
-            $paddleAmount = $order->total_amount - $walletAmount;
+            $paddleAmount = (float) $order->total_amount - (float) $walletAmount;
 
-            // If wallet covers everything, process as wallet payment
+            // Wallet covers everything
             if ($paddleAmount <= 0) {
                 return $this->initializeWalletPayment($user, $order);
             }
 
-            // Deduct wallet amount if specified
+            // Deduct wallet first
             if ($walletAmount > 0) {
                 $this->walletService->deductCredits($user, $walletAmount, 'purchase_partial', [
                     'order_id' => $order->id,
@@ -127,14 +116,20 @@ class PaymentService
                 ]);
             }
 
-            // Initialize paddle for remaining amount
-            $paddleResult = $this->initializePaddlePaymentForAmount($user, $order, $paddleAmount, [
-                'payment_method' => 'hybrid',
-                'wallet_amount' => $walletAmount,
-            ]);
+            // Charge remaining via Paddle as one line
+            $paddleResult = $this->initializePaddlePaymentForAmount(
+                user: $user,
+                order: $order,
+                amount: $paddleAmount,
+                metadata: [
+                    'payment_method' => 'hybrid',
+                    'wallet_amount' => $walletAmount,
+                ],
+                singleBalanceLineItem: true
+            );
 
             if (!$paddleResult['success']) {
-                // Refund wallet deduction if paddle fails
+                // Refund wallet deduction if paddle init fails
                 if ($walletAmount > 0) {
                     $this->walletService->refundCredits($user, $walletAmount, [
                         'order_id' => $order->id,
@@ -144,7 +139,7 @@ class PaymentService
                 return $paddleResult;
             }
 
-            // Update payment record with hybrid details
+            // Update payment record
             $payment = Payment::find($paddleResult['payment_id']);
             if ($payment) {
                 $payment->update([
@@ -166,229 +161,168 @@ class PaymentService
                 'new_wallet_balance' => $this->walletService->getBalance($user),
             ]);
         } catch (Exception $e) {
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-            ];
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 
-    /**
-     * Initialize Paddle payment with dynamic product prices from database
-     */
     private function initializePaddlePayment(User $user, Order $order): array
     {
-        return $this->initializePaddlePaymentForAmount($user, $order, $order->total_amount, [
-            'payment_method' => 'paddle',
-        ]);
+        return $this->initializePaddlePaymentForAmount(
+            user: $user,
+            order: $order,
+            amount: (float) $order->total_amount,
+            metadata: ['payment_method' => 'paddle'],
+            singleBalanceLineItem: false
+        );
     }
 
     /**
-     * Initialize Paddle payment for a specific amount (for hybrid payments)
+     * Create a Paddle Billing transaction (POST /transactions).
+     * Uses NON-catalog items (price + product) so you don't need to create products/prices in Paddle. :contentReference[oaicite:5]{index=5}
+     *
+     * If singleBalanceLineItem=true, charges one item for $amount (used for hybrid).
      */
-    private function initializePaddlePaymentForAmount(User $user, Order $order, float $amount, array $metadata = []): array
-    {
+    private function initializePaddlePaymentForAmount(
+        User $user,
+        Order $order,
+        float $amount,
+        array $metadata = [],
+        bool $singleBalanceLineItem = false
+    ): array {
         try {
-            $paddleApiKey = config('services.paddle.key');
-            $paddleEnvironment = config('services.paddle.environment', 'sandbox');
-
-            if (!$paddleApiKey) {
+            $apiKey = (string) config('services.paddle.key');
+            if ($apiKey === '') {
                 throw new Exception('Paddle API key not configured');
             }
 
-            // Build line items from actual product prices in database
-            $lineItems = [];
-            foreach ($order->items as $item) {
-                $lineItems[] = [
-                    'price_id' => $this->getOrCreatePaddlePrice($item->product, $paddleApiKey, $paddleEnvironment),
-                    'quantity' => $item->quantity,
-                ];
-            }
+            $currency = strtoupper($order->currency ?? 'USD');
 
-            if (empty($lineItems)) {
+            $items = $singleBalanceLineItem
+                ? [$this->makeNonCatalogItem(
+                    name: 'Order balance #' . $order->id,
+                    description: 'Remaining balance for order ' . $order->id,
+                    unitAmountMinor: $this->toMinorUnits($amount),
+                    currency: $currency,
+                    quantity: 1
+                )]
+                : $this->buildItemsFromOrder($order, $currency);
+
+            if (empty($items)) {
                 throw new Exception('No items in order');
             }
 
-            // Prepare Paddle checkout with actual order data
-            $paddleData = [
-                'items' => $lineItems,
-                'customer' => [
-                    'email' => $user->email,
-                    'name' => $user->name,
-                ],
+            // Important: set checkout.url so you don't need a "Default Payment Link" in Paddle dashboard. :contentReference[oaicite:6]{index=6}
+            $checkoutBaseUrl = rtrim((string) config('services.paddle.checkout_url', config('app.url') . '/pay'), '/');
+
+            $payload = [
+                'items' => $items,
+                'collection_mode' => 'automatic',
+                'currency_code' => $currency,
                 'custom_data' => array_merge([
                     'user_id' => $user->id,
                     'order_id' => $order->id,
                 ], $metadata),
-                'return_url' => config('app.url') . '/payment/success',
+                'checkout' => [
+                    'url' => $checkoutBaseUrl,
+                ],
             ];
 
-            $ch = curl_init();
-            curl_setopt_array($ch, [
-                CURLOPT_URL => 'https://' . ($paddleEnvironment === 'sandbox' ? 'sandbox-api' : 'api') . '.paddle.com/checkouts',
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_POST => true,
-                CURLOPT_HTTPHEADER => [
-                    'Authorization: Bearer ' . $paddleApiKey,
-                    'Content-Type: application/json',
-                ],
-                CURLOPT_POSTFIELDS => json_encode($paddleData),
-            ]);
+            $data = $this->paddlePost('/transactions', $payload);
 
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
-            if ($httpCode !== 200) {
-                throw new Exception('Paddle API error: ' . $response);
+            $txnId = $data['id'] ?? null; // txn_...
+            if (!$txnId) {
+                throw new Exception('Invalid Paddle response: missing data.id');
             }
 
-            $paddleResponse = json_decode($response, true);
+            $checkoutUrl = $data['checkout']['url'] ?? null;
 
-            if (!isset($paddleResponse['data']['checkout_id'])) {
-                throw new Exception('Invalid Paddle response');
-            }
-
-            // Create payment record
             $payment = Payment::create([
                 'user_id' => $user->id,
                 'order_id' => $order->id,
-                'payment_id' => $paddleResponse['data']['checkout_id'],
+                'payment_id' => $txnId, // store txn_... here
                 'gateway' => 'paddle',
                 'payment_method' => $metadata['payment_method'] ?? 'paddle',
-                'amount' => $order->total_amount,
-                'paddle_amount' => $amount,
-                'wallet_amount' => $order->total_amount - $amount,
-                'currency' => $order->currency ?? 'USD',
+                'amount' => (float) $order->total_amount,
+                'paddle_amount' => (float) $amount,
+                'wallet_amount' => (float) $order->total_amount - (float) $amount,
+                'currency' => $currency,
                 'status' => 'pending',
                 'metadata' => array_merge([
-                    'checkout_id' => $paddleResponse['data']['checkout_id'],
-                    'items_count' => count($lineItems),
+                    'paddle_transaction_id' => $txnId,
+                    'checkout_url' => $checkoutUrl,
+                    'items_count' => count($items),
                 ], $metadata),
             ]);
 
             return [
                 'success' => true,
-                'url' => $paddleResponse['data']['checkout_url'],
-                'payment_id' => $payment->id,
-                'checkout_id' => $paddleResponse['data']['checkout_id'],
+                'url' => $checkoutUrl,
+                'payment_id' => $payment->id, // your DB row id
+                'paddle_transaction_id' => $txnId,
             ];
         } catch (Exception $e) {
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-            ];
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 
     /**
-     * Get or create a Paddle price for a product
-     * Uses the product's database price, not a pre-configured price ID
-     */
-    private function getOrCreatePaddlePrice($product, $paddleApiKey, $paddleEnvironment)
-    {
-        // For sandbox mode, we can use the amount directly
-        // Store the price ID mapped to product in metadata for later reference
-        $cacheKey = 'paddle_price_' . $product->id . '_' . $product->currency;
-        
-        // Try to get from cache/metadata first
-        $priceId = Cache::get($cacheKey);
-        
-        if ($priceId) {
-            return $priceId;
-        }
-
-        // For now, return a generic price structure
-        // In production, you would create Paddle prices programmatically
-        // For sandbox testing, Paddle allows dynamic amounts
-        $priceData = [
-            'description' => $product->name,
-            'amount' => (int)($product->price * 100), // Convert to cents
-            'currency_code' => strtoupper($product->currency ?? 'USD'),
-        ];
-
-        // Cache for 24 hours
-        Cache::put($cacheKey, $priceData, 86400);
-
-        return $priceData;
-    }
-
-    /**
-     * Initialize wallet top-up via Paddle
+     * Wallet top-up via Paddle transaction (non-catalog).
      */
     public function initializeWalletTopup(User $user, float $amount): array
     {
         try {
-            $paddleApiKey = config('services.paddle.key');
-            $paddleEnvironment = config('services.paddle.environment', 'sandbox');
+            $currency = 'USD';
 
-            if (!$paddleApiKey) {
-                throw new Exception('Paddle API key not configured');
-            }
-
-            // Create a virtual "wallet top-up" item for Paddle
-            $paddleData = [
+            $payload = [
                 'items' => [
-                    [
-                        'price_id' => [
-                            'description' => 'Wallet Top-up Credits',
-                            'amount' => (int)($amount * 100), // Convert to cents
-                            'currency_code' => 'USD',
-                        ],
-                        'quantity' => 1,
-                    ],
+                    $this->makeNonCatalogItem(
+                        name: 'Wallet Top-up Credits',
+                        description: 'Wallet top-up',
+                        unitAmountMinor: $this->toMinorUnits($amount),
+                        currency: $currency,
+                        quantity: 1
+                    ),
                 ],
-                'customer' => [
-                    'email' => $user->email,
-                    'name' => $user->name,
-                ],
+                'collection_mode' => 'automatic',
+                'currency_code' => $currency,
                 'custom_data' => [
                     'user_id' => $user->id,
                     'transaction_type' => 'wallet_topup',
                     'topup_amount' => $amount,
                 ],
-                'return_url' => config('app.url') . '/wallet-topup/success',
             ];
 
-            $ch = curl_init();
-            curl_setopt_array($ch, [
-                CURLOPT_URL => 'https://' . ($paddleEnvironment === 'sandbox' ? 'sandbox-api' : 'api') . '.paddle.com/checkouts',
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_POST => true,
-                CURLOPT_HTTPHEADER => [
-                    'Authorization: Bearer ' . $paddleApiKey,
-                    'Content-Type: application/json',
-                ],
-                CURLOPT_POSTFIELDS => json_encode($paddleData),
-            ]);
+            $checkoutUrl = $data['checkout']['url'] ?? null;
+            logger()->info('PADDLE tx create response', [
+  'id' => $data['id'] ?? null,
+  'status' => $data['status'] ?? null,
+  'customer_id' => $data['customer_id'] ?? null,
+  'address_id' => $data['address_id'] ?? null,
+]);
 
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
 
-            if ($httpCode !== 200) {
-                throw new Exception('Paddle API error: ' . $response);
-            }
+            $data = $this->paddlePost('/transactions', $payload);
 
-            $paddleResponse = json_decode($response, true);
+  $txnId = $data['id'] ?? null;
+if (!$txnId) {
+    throw new Exception('Invalid Paddle response: missing data.id');
+}
 
-            if (!isset($paddleResponse['data']['checkout_id'])) {
-                throw new Exception('Invalid Paddle response');
-            }
+            $checkoutUrl = $data['checkout']['url'] ?? null;
 
-            // Create a payment record for wallet top-up
             $payment = Payment::create([
                 'user_id' => $user->id,
                 'order_id' => null,
-                'payment_id' => $paddleResponse['data']['checkout_id'],
+                'payment_id' => $txnId,
                 'gateway' => 'paddle',
                 'payment_method' => 'wallet_topup',
                 'amount' => $amount,
                 'paddle_amount' => $amount,
-                'currency' => 'USD',
+                'currency' => $currency,
                 'status' => 'pending',
                 'metadata' => [
-                    'checkout_id' => $paddleResponse['data']['checkout_id'],
+                    'paddle_transaction_id' => $txnId,
+                    'checkout_url' => $checkoutUrl,
                     'transaction_type' => 'wallet_topup',
                     'topup_amount' => $amount,
                 ],
@@ -396,31 +330,22 @@ class PaymentService
 
             return [
                 'success' => true,
-                'url' => $paddleResponse['data']['checkout_url'],
-                'payment_id' => $payment->id,
-                'checkout_id' => $paddleResponse['data']['checkout_id'],
-                'topup_amount' => $amount,
+                'transaction_id' => $txnId,             
             ];
         } catch (Exception $e) {
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-            ];
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 
-    /**
-     * Complete wallet top-up after successful Paddle payment
-     */
     public function completeWalletTopup(Payment $payment): array
     {
         try {
-            if (!$payment->metadata['topup_amount'] ?? null) {
+            $topupAmount = $payment->metadata['topup_amount'] ?? null;
+            if (!$topupAmount) {
                 throw new Exception('Invalid wallet top-up payment');
             }
 
-            $topupAmount = $payment->metadata['topup_amount'];
-            $this->walletService->addCredits($payment->user, $topupAmount, 'paddle_topup', [
+            $this->walletService->addCredits($payment->user, (float) $topupAmount, 'paddle_topup', [
                 'payment_id' => $payment->id,
             ]);
 
@@ -428,21 +353,15 @@ class PaymentService
 
             return [
                 'success' => true,
-                'topup_amount' => $topupAmount,
+                'topup_amount' => (float) $topupAmount,
                 'new_balance' => $this->walletService->getBalance($payment->user),
             ];
         } catch (Exception $e) {
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-            ];
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 
-    /**
-     * Complete order after successful payment
-     */
-    private function completeOrder(Order $order = null): void
+    private function completeOrder(?Order $order): void
     {
         if ($order) {
             $order->update(['status' => 'completed']);
@@ -450,90 +369,176 @@ class PaymentService
     }
 
     /**
-     * Handle Paddle webhook
+     * Paddle webhook handler (Billing): transaction.completed. :contentReference[oaicite:7]{index=7}
      */
-    public function handlePaddleWebhook(array $data): array
+    public function handlePaddleWebhook(array $payload): array
     {
-        $eventType = $data['event_type'] ?? null;
+        $eventType = $payload['event_type'] ?? null;
 
-        if ($eventType === 'checkout.completed') {
-            $customData = $data['data']['custom_data'] ?? [];
-            $checkoutId = $data['data']['checkout_id'] ?? null;
-
-            $payment = Payment::where('payment_id', $checkoutId)
-                ->where('gateway', 'paddle')
-                ->first();
-
-            if (!$payment) {
-                return ['success' => false, 'error' => 'Payment not found'];
-            }
-
-            // Handle wallet top-up
-            if (($customData['transaction_type'] ?? null) === 'wallet_topup') {
-                return $this->completeWalletTopup($payment);
-            }
-
-            // Handle regular order payment
-            $payment->markCompleted();
-            $this->completeOrder($payment->order);
-            return ['success' => true, 'message' => 'Payment completed'];
+        if ($eventType !== 'transaction.completed') {
+            return ['success' => true];
         }
 
-        return ['success' => true];
+        $txnId = $payload['data']['id'] ?? null; // txn_...
+        if (!$txnId) {
+            return ['success' => false, 'error' => 'Missing transaction id'];
+        }
+
+        $payment = Payment::where('payment_id', $txnId)
+            ->where('gateway', 'paddle')
+            ->first();
+
+        if (!$payment) {
+            return ['success' => false, 'error' => 'Payment not found'];
+        }
+
+        $customData = $payload['data']['custom_data'] ?? [];
+
+        if (($customData['transaction_type'] ?? null) === 'wallet_topup') {
+            return $this->completeWalletTopup($payment);
+        }
+
+        $payment->markCompleted();
+        $this->completeOrder($payment->order);
+
+        return ['success' => true, 'message' => 'Payment completed'];
     }
 
     /**
-     * Process refund
+     * Refund (Billing) is done via Adjustments, not /transactions/{id}/refund. :contentReference[oaicite:8]{index=8}
+     * This creates a FULL refund adjustment.
      */
-    public function refundPayment(Payment $payment, string $reason = null): array
+    public function refundPayment(Payment $payment, ?string $reason = null): array
     {
         try {
-            return $this->refundPaddlePayment($payment, $reason);
+            if (($payment->gateway ?? null) !== 'paddle') {
+                throw new Exception('Not a Paddle payment');
+            }
+
+            $payload = [
+                'action' => 'refund',
+                'reason' => $reason ?: 'customer_request',
+                'transaction_id' => $payment->payment_id, // txn_...
+                'type' => 'full',
+            ];
+
+            $data = $this->paddlePost('/adjustments', $payload);
+
+            $payment->update([
+                'status' => 'refund_requested',
+                'refunded_at' => now(),
+                'metadata' => array_merge($payment->metadata ?? [], [
+                    'adjustment_id' => $data['id'] ?? null, // adj_...
+                ]),
+            ]);
+
+            return ['success' => true, 'message' => 'Refund requested'];
         } catch (Exception $e) {
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 
-    /**
-     * Refund Paddle payment
-     */
-    private function refundPaddlePayment(Payment $payment, string $reason = null): array
-    {
-        $paddleApiKey = config('services.paddle.key');
-        $paddleEnvironment = config('services.paddle.environment', 'sandbox');
+    // -----------------------------
+    // Helpers
+    // -----------------------------
 
-        if (!$paddleApiKey) {
-            throw new Exception('Paddle API key not configured');
-        }
+use Illuminate\Support\Facades\Http;
 
-        $refundData = [
-            'reason' => $reason ?? 'customer_request',
-        ];
+private function paddleBaseUrl(): string
+{
+    $env = strtolower(trim((string) config('services.paddle.environment', 'sandbox')));
 
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL => 'https://' . ($paddleEnvironment === 'sandbox' ? 'sandbox-api' : 'api') . '.paddle.com/transactions/' . $payment->payment_id . '/refund',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CUSTOMREQUEST => 'POST',
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . $paddleApiKey,
-                'Content-Type: application/json',
-            ],
-            CURLOPT_POSTFIELDS => json_encode($refundData),
-        ]);
+    return $env === 'sandbox'
+        ? 'https://sandbox-api.paddle.com'
+        : 'https://api.paddle.com';
+}
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode === 200) {
-            $payment->update([
-                'status' => 'refunded',
-                'refunded_at' => now(),
-            ]);
-            return ['success' => true];
-        }
-
-        return ['success' => false, 'error' => 'Refund failed'];
+private function paddlePost(string $path, array $payload): array
+{
+    $apiKey = (string) config('services.paddle.key');
+    if ($apiKey === '') {
+        throw new Exception('Paddle API key not configured');
     }
+
+    $url = $this->paddleBaseUrl() . $path;
+
+    $res = Http::withToken($apiKey)
+        ->acceptJson()
+        ->withHeaders([
+            'Paddle-Version' => '1',
+        ])
+        ->post($url, $payload);
+
+    // IMPORTANT: vezi exact ce întoarce Paddle
+    logger()->info('PADDLE raw response', [
+        'url' => $url,
+        'status' => $res->status(),
+        'body' => $res->body(),
+    ]);
+
+    if (!$res->successful()) {
+        throw new Exception('Paddle API error: ' . $res->body());
+    }
+
+    $json = $res->json();
+    if (!is_array($json) || !array_key_exists('data', $json) || !is_array($json['data'])) {
+        throw new Exception('Paddle API unexpected response: ' . $res->body());
+    }
+
+    return $json['data'];
+}
+
+    private function buildItemsFromOrder(Order $order, string $currency): array
+    {
+        $items = [];
+
+        foreach ($order->items as $item) {
+            $qty = max(1, (int) $item->quantity);
+
+            $items[] = $this->makeNonCatalogItem(
+                name: (string) $item->product->name,
+                description: (string) $item->product->name,
+                unitAmountMinor: $this->toMinorUnits((float) $item->product->price),
+                currency: strtoupper($item->product->currency ?? $currency),
+                quantity: $qty
+            );
+        }
+
+        return $items;
+    }
+
+    /**
+     * Non-catalog price + non-catalog product (no pri_/pro_ needed). :contentReference[oaicite:11]{index=11}
+     */
+    private function makeNonCatalogItem(
+        string $name,
+        string $description,
+        int $unitAmountMinor,
+        string $currency,
+        int $quantity
+    ): array {
+        return [
+            'quantity' => $quantity,
+            'price' => [
+                'name' => $name,
+                'description' => $description,
+                'unit_price' => [
+                    'amount' => (string) $unitAmountMinor,
+                    'currency_code' => $currency,
+                ],
+                'product' => [
+                    'name' => $name,
+                    // Pick the right tax category for what you sell
+                    'tax_category' => 'standard',
+                ],
+            ],
+        ];
+    }
+
+    private function toMinorUnits(float $amount): int
+    {
+        // Works for USD/EUR/etc (2 decimals). If you use 0/3-decimal currencies, adjust this.
+        return (int) round($amount * 100);
+    }
+    
 }
