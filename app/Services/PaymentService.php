@@ -396,9 +396,16 @@ class PaymentService
             return ['success' => false, 'error' => 'Payment not found'];
         }
 
+        if ($payment->isCompleted()) {
+            return ['success' => true, 'message' => 'Payment already completed'];
+        }
+
         $customData = $payload['data']['custom_data'] ?? [];
 
-        if (($customData['transaction_type'] ?? null) === 'wallet_topup') {
+        $isWalletTopup = ($customData['transaction_type'] ?? null) === 'wallet_topup'
+            || ($payment->payment_method ?? null) === 'wallet_topup';
+
+        if ($isWalletTopup) {
             return $this->completeWalletTopup($payment);
         }
 
