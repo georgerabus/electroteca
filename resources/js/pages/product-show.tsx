@@ -1,11 +1,10 @@
 import AppLayout from '@/layouts/app-layout';
 import { products } from '@/routes';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
-import { ShoppingCart, ArrowLeft, Package, Calendar, DollarSign, AlertCircle, Star } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { AlertCircle, ArrowLeft, Calendar, Package, ShoppingCart, Star } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
-import { type SharedData } from '@/types';
 
 type Product = {
     id: number;
@@ -111,7 +110,7 @@ export default function ProductShow({ product }: ProductShowPageProps) {
 
     const checkBorrowability = async () => {
         if (!auth.user) return;
-        
+
         setIsCheckingBorrow(true);
         try {
             const response = await fetch(`/products/${product.id}/check-borrow`);
@@ -136,7 +135,7 @@ export default function ProductShow({ product }: ProductShowPageProps) {
             1,
         );
         setAddedToCart(true);
-        
+
         // Reset message after 2 seconds
         setTimeout(() => setAddedToCart(false), 2000);
     };

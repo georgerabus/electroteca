@@ -1,7 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
-import { Head, Link, router } from '@inertiajs/react';
-import { DollarSign, ArrowUp, ArrowDown, History, Plus, Loader } from 'lucide-react';
-import { usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { ArrowDown, ArrowUp, DollarSign, History, Loader, Plus } from 'lucide-react';
 import { type SharedData } from '@/types';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
@@ -45,7 +44,7 @@ const loadPaddle = () =>
       if (window.Paddle) {
         return resolve();
       }
-      
+
       // Otherwise wait for the load event
       const onLoad = () => {
         existing.removeEventListener('load', onLoad);
@@ -64,15 +63,15 @@ const loadPaddle = () =>
     s.src = 'https://cdn.paddle.com/paddle/v2/paddle.js';
     s.async = true;
     s.charset = 'utf-8';
-    
+
     let timeoutId: NodeJS.Timeout;
-    
+
     const cleanup = () => {
       clearTimeout(timeoutId);
       s.removeEventListener('load', onLoad);
       s.removeEventListener('error', onError);
     };
-    
+
     const onLoad = () => {
       cleanup();
       if (window.Paddle) {
@@ -81,17 +80,17 @@ const loadPaddle = () =>
         reject(new Error('Paddle.js script loaded but window.Paddle is not defined'));
       }
     };
-    
+
     const onError = (error: Event | string) => {
       cleanup();
       const message = typeof error === 'string' ? error : 'Failed to load Paddle.js from CDN';
       console.error('[Paddle Loading Error]', message);
       reject(new Error(message));
     };
-    
+
     s.onload = onLoad;
     s.onerror = () => onError('Failed to fetch Paddle.js script');
-    
+
     // Set a timeout as fallback (10 seconds)
     timeoutId = setTimeout(() => {
       if (!window.Paddle) {
@@ -99,7 +98,7 @@ const loadPaddle = () =>
         reject(new Error('Paddle.js loading timeout - took longer than 10 seconds'));
       }
     }, 10000);
-    
+
     document.body.appendChild(s);
   });
 
@@ -184,7 +183,7 @@ export default function Wallet({ wallet_balance, transactions }: WalletPageProps
         }
 
         console.log('[Paddle Wallet] Initializing Paddle.js...');
-        
+
         // 1) init Paddle.js
         await initPaddleOnce(paddleClientToken);
         console.log('[Paddle Wallet] Paddle.js initialized successfully');
@@ -282,8 +281,8 @@ window.Paddle.Checkout.open({ transactionId: txnId }); // :contentReference[oaic
                                 <div key={transaction.id} className="flex items-center justify-between py-4">
                                     <div className="flex items-center gap-4">
                                         <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                                            transaction.type === 'credit' 
-                                                ? 'bg-green-500/20 text-green-400' 
+                                            transaction.type === 'credit'
+                                                ? 'bg-green-500/20 text-green-400'
                                                 : 'bg-red-500/20 text-red-400'
                                         }`}>
                                             {transaction.type === 'credit' ? (
@@ -336,7 +335,7 @@ window.Paddle.Checkout.open({ transactionId: txnId }); // :contentReference[oaic
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                 <div className="bg-gray-900 rounded-2xl border border-white/10 p-8 max-w-md w-full">
                     <h3 className="text-2xl font-bold mb-4">Add Credits to Your Wallet</h3>
-                    
+
                     {error && (
                         <div className="mb-4 p-4 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400 text-sm">
                             {error}

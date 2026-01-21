@@ -1,14 +1,14 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head, Link } from '@inertiajs/react';
 import {
-    UsersRound,
-    BadgeCheck,
-    GraduationCap,
-    Cpu,
-    Wrench,
-    Briefcase,
-    HeartHandshake,
     ArrowRight,
+    BadgeCheck,
+    Briefcase,
+    Cpu,
+    GraduationCap,
+    HeartHandshake,
+    UsersRound,
+    Wrench
 } from 'lucide-react';
 
 export default function InternshipPrograms() {

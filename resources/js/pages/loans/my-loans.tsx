@@ -1,7 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { ArrowLeft, Package, Calendar, DollarSign, AlertCircle, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Calendar, CheckCircle, Clock, DollarSign, Package, XCircle } from 'lucide-react';
 import { type SharedData } from '@/types';
 
 type Loan = {

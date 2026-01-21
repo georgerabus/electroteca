@@ -2,39 +2,33 @@ import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Icon } from '@/components/icon';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
     NavigationMenu,
     NavigationMenuItem,
     NavigationMenuList,
-    navigationMenuTriggerStyle,
+    navigationMenuTriggerStyle
 } from '@/components/ui/navigation-menu';
-import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetTrigger,
-} from '@/components/ui/sheet';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { UserMenuContent } from '@/components/user-menu-content';
 import { useInitials } from '@/hooks/use-initials';
 import { cn } from '@/lib/utils';
-import { dashboard, products } from '@/routes';
+import { dashboard } from '@/routes';
 import { type BreadcrumbItem, type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { BadgePercent, BookOpen, Folder, LayoutGrid, Menu, Search, ShoppingCart, Package, Wallet, UserCircle2 } from 'lucide-react';
+import {
+    BadgePercent,
+    BookOpen,
+    Folder,
+    LayoutGrid,
+    Menu,
+    Package,
+    Search,
+    ShoppingCart,
+    UserCircle2,
+    Wallet
+} from 'lucide-react';
 import ThemeToggleButton from '@/components/ui/theme-toggle';
-import AppLogo from './app-logo';
 import AppLogoIcon from './app-logo-icon';
 import { useCart } from '@/hooks/use-cart';
 
@@ -112,7 +106,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
     const authUser = auth?.user ?? null;
     const getInitials = useInitials();
     const { itemCount } = useCart();
-    
+
     return (
         <>
             <div className="border-b border-sidebar-border/80">
@@ -204,7 +198,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                             </span>
                         </Link>
                     </div>
-                    
+
 
                     {/* Desktop Navigation */}
                     <div className="ml-6 hidden h-full items-center space-x-6 lg:flex">
@@ -307,7 +301,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                             <ThemeToggleButton />
                             {/* Removed rightNavItems from desktop navigation */}
                         </div>
-                        
+
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 {authUser ? (

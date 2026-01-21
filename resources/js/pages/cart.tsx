@@ -1,7 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useCart } from '@/hooks/use-cart';
-import { usePage } from '@inertiajs/react';
 import { type SharedData } from '@/types';
 
 export default function CartPage() {
@@ -98,7 +97,7 @@ export default function CartPage() {
               <button className="text-sm text-gray-400 underline" onClick={() => clearCart()}>Clear cart</button>
               <div className="text-xl font-bold text-white">Total: {totalPrice.toFixed(2)}</div>
             </div>
-            <button 
+            <button
               onClick={handleCheckout}
               disabled={!auth.user || cart.length === 0}
               className={`mt-8 w-full rounded-xl px-8 py-4 font-semibold text-white text-lg ring-2 transition ${

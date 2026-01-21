@@ -8,9 +8,9 @@ import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { disable, enable, show } from '@/routes/two-factor';
 import {
-    sendEmailOtp,
-    verifyEmailOtp,
     disableEmailOtp,
+    sendEmailOtp,
+    verifyEmailOtp
 } from '@/actions/App/Http/Controllers/Settings/TwoFactorAuthenticationController';
 import { type BreadcrumbItem } from '@/types';
 import { Form, Head } from '@inertiajs/react';

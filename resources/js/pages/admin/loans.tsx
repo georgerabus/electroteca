@@ -1,6 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router } from '@inertiajs/react';
-import { Package, User, Calendar, DollarSign, Filter, Check, X, PackageCheck } from 'lucide-react';
+import { Calendar, Check, DollarSign, Filter, Package, PackageCheck, User, X } from 'lucide-react';
 import { useState } from 'react';
 
 type Loan = {

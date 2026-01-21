@@ -2,7 +2,7 @@ import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
-import { ChangeEvent, useState, useEffect } from 'react';
+import { ChangeEvent, useEffect, useState } from 'react';
 
 type Status =
     | 'Requested'

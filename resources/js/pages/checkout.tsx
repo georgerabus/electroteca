@@ -1,9 +1,8 @@
 import AppLayout from '@/layouts/app-layout';
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
-import { ArrowLeft, ShoppingCart, DollarSign, AlertCircle, Calendar } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Calendar, DollarSign, ShoppingCart } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
-import { usePage } from '@inertiajs/react';
 import { type SharedData } from '@/types';
 
 type CheckoutPageProps = {
@@ -25,7 +24,7 @@ export default function Checkout({ items: serverItems, total: serverTotal, curre
     const { auth } = usePage<SharedData>().props;
     const { cart, totalPrice, clearCart } = useCart();
     const [cartLoaded, setCartLoaded] = useState(false);
-    
+
     // Wait for cart to load from localStorage
     useEffect(() => {
         // Give it a moment for localStorage to load
@@ -45,7 +44,7 @@ export default function Checkout({ items: serverItems, total: serverTotal, curre
         subtotal: (parseFloat(item.price) * item.quantity).toFixed(2),
         image_url: item.image_url,
     }));
-    
+
     const total = totalPrice;
     const currency = cart.length > 0 ? cart[0].currency : 'MDL';
     const walletBalance = serverWalletBalance ? parseFloat(serverWalletBalance) : (auth.user?.wallet_balance || 0);
@@ -245,7 +244,7 @@ export default function Checkout({ items: serverItems, total: serverTotal, curre
                                 <Calendar className="h-5 w-5" />
                                 Borrowing Period
                             </h2>
-                            
+
                             <div className="space-y-4 mb-6">
                                 <div>
                                     <label className="block text-sm text-gray-300 mb-1">

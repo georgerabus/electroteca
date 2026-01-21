@@ -9,7 +9,7 @@ import {
     DialogDescription,
     DialogFooter,
     DialogHeader,
-    DialogTitle,
+    DialogTitle
 } from '@/components/ui/dialog';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
@@ -43,11 +43,11 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Admin', href: '/admin' },
 ];
 
-function ProductRow({ 
-    product, 
+function ProductRow({
+    product,
     categories,
-    onEdit 
-}: { 
+    onEdit
+}: {
     product: Product;
     categories: Category[];
     onEdit: (product: Product) => void;
@@ -92,7 +92,7 @@ function ProductRow({
                 </span>
             </td>
             <td className="px-4 py-3">
-                <button 
+                <button
                     onClick={() => onEdit(product)}
                     className="text-sm text-blue-400 hover:text-blue-300"
                 >
@@ -171,7 +171,7 @@ export default function AdminProducts({
     const handleUpdateProduct = (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingProduct) return;
-        
+
         editForm.put(`/admin/products/${editingProduct.id}`, {
             onSuccess: () => {
                 setShowEditModal(false);
@@ -183,7 +183,7 @@ export default function AdminProducts({
     const handleUpdateStock = (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingProduct) return;
-        
+
         stockForm.patch(`/admin/products/${editingProduct.id}/stock`, {
             onSuccess: () => {
                 // Keep modal open but show success
@@ -207,7 +207,7 @@ export default function AdminProducts({
                         >
                             Add Product
                         </Button>
-                        <Link 
+                        <Link
                             href="/admin/users"
                             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-500"
                         >
@@ -418,7 +418,7 @@ export default function AdminProducts({
                             Update product details or stock quantity.
                         </DialogDescription>
                     </DialogHeader>
-                    
+
                     {/* Quick Stock Update */}
                     <div className="mb-6 rounded-lg border border-white/10 bg-white/5 p-4">
                         <h3 className="mb-3 text-sm font-medium">Quick Stock Update</h3>

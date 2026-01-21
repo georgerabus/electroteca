@@ -1,14 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head, Link } from '@inertiajs/react';
-import {
-    ArrowRight,
-    Cpu,
-    GraduationCap,
-    Handshake,
-    Leaf,
-    Rocket,
-    ShieldCheck,
-} from 'lucide-react';
+import { ArrowRight, Cpu, GraduationCap, Handshake, Leaf, Rocket, ShieldCheck } from 'lucide-react';
 
 const accent = 'text-red-600';
 const accentBg = 'bg-red-600';

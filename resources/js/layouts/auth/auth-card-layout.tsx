@@ -1,12 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
 import AppLogoIcon from '@/components/app-logo-icon';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { products } from '@/routes';
 import { Link } from '@inertiajs/react';
 import { type PropsWithChildren } from 'react';

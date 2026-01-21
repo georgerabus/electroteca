@@ -10,7 +10,7 @@ import {
     DialogDescription,
     DialogFooter,
     DialogHeader,
-    DialogTitle,
+    DialogTitle
 } from '@/components/ui/dialog';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';

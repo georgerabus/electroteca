@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { usePage } from '@inertiajs/react';
 import { type SharedData } from '@/types';
 
@@ -43,7 +43,7 @@ export function useCart() {
       const parsedCart = cartData ? JSON.parse(cartData) : [];
       setCart(parsedCart);
       setLastUserId(currentUserId);
-      
+
       // Store current user ID
       if (currentUserId) {
         window.localStorage.setItem('cart_user_id', String(currentUserId));
