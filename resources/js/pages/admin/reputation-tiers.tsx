@@ -101,7 +101,7 @@ export default function ReputationTiers({ tiers }: ReputationTiersPageProps) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Admin - Reputation Tiers" />
 
-            <div className="mx-auto max-w-full lg:max-w-[1400px] xl:max-w-[1800px] p-4 md:p-6">
+            <div className="mx-auto max-w-full lg:max-w-[1400px] xl:max-w-[1800px] 2xl:max-w-[2000px] p-4 md:p-6">
                 <div className="mb-6 flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold tracking-tight">

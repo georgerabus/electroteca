@@ -84,7 +84,7 @@ export default function AdminLoans({ loans, users, filters }: AdminLoansPageProp
     return (
         <AppLayout breadcrumbs={[{ title: 'Admin', href: '/admin' }, { title: 'Loans', href: '/admin/loans' }]}>
             <Head title="Admin - Loans" />
-            <div className="mx-auto max-w-full lg:max-w-[1400px] xl:max-w-[1800px] p-4 sm:p-8">
+            <div className="mx-auto max-w-full lg:max-w-[1400px] xl:max-w-[1800px] 2xl:max-w-[2000px] p-4 sm:p-8">
                 <div className="mb-6 flex items-center justify-between">
                     <h1 className="text-3xl font-bold flex items-center gap-2">
                         <Package className="h-8 w-8" />
@@ -308,4 +308,3 @@ export default function AdminLoans({ loans, users, filters }: AdminLoansPageProp
         </AppLayout>
     );
 }
-

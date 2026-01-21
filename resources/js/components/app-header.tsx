@@ -2,7 +2,14 @@ import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Icon } from '@/components/icon';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
     NavigationMenu,
     NavigationMenuItem,
@@ -16,18 +23,7 @@ import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem, type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import {
-    BadgePercent,
-    BookOpen,
-    Folder,
-    LayoutGrid,
-    Menu,
-    Package,
-    Search,
-    ShoppingCart,
-    UserCircle2,
-    Wallet
-} from 'lucide-react';
+import { BadgePercent, BookOpen, ChevronDown, Folder, LayoutGrid, Menu, Search, ShoppingCart, Package, Wallet, UserCircle2 } from 'lucide-react';
 import ThemeToggleButton from '@/components/ui/theme-toggle';
 import AppLogoIcon from './app-logo-icon';
 import { useCart } from '@/hooks/use-cart';
@@ -106,11 +102,12 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
     const authUser = auth?.user ?? null;
     const getInitials = useInitials();
     const { itemCount } = useCart();
-
+    const isAdminRoute = authUser?.admin && page.url.startsWith('/admin');
+    
     return (
         <>
             <div className="border-b border-sidebar-border/80">
-                <div className="mx-auto flex h-16 items-center px-4 max-w-full md:max-w-7xl lg:max-w-10xl">
+                <div className="container mx-auto flex h-16 items-center px-2">
                     {/* Mobile Menu */}
                     <div className="lg:hidden">
                         <Sheet>
@@ -201,9 +198,9 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
 
 
                     {/* Desktop Navigation */}
-                    <div className="ml-6 hidden h-full items-center space-x-6 lg:flex">
-                        <NavigationMenu className="flex h-full items-stretch">
-                            <NavigationMenuList className="flex h-full items-stretch space-x-2">
+                    <div className="ml-6 hidden flex-1 items-center gap-x-4 lg:flex">
+                        <NavigationMenu className="flex items-stretch">
+                            <NavigationMenuList className="flex items-center gap-x-2">
                                 {mainNavItems.map((item, index) => (
                                     <NavigationMenuItem
                                         key={index}
@@ -235,37 +232,45 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                         )}
                                     </NavigationMenuItem>
                                 ))}
-                                {authUser?.admin && adminNavItems.map((item, index) => (
-                                    <NavigationMenuItem
-                                        key={`admin-${index}`}
-                                        className="relative flex h-full items-center"
-                                    >
-                                        <Link
-                                            href={item.href}
-                                            className={cn(
-                                                navigationMenuTriggerStyle(),
-                                                page.url ===
-                                                    (typeof item.href ===
-                                                    'string'
-                                                        ? item.href
-                                                        : item.href.url) &&
-                                                    activeItemStyles,
-                                                'h-9 cursor-pointer px-3 border-l border-white/10 ml-2 pl-4',
-                                            )}
-                                        >
-                                            {item.icon && (
-                                                <Icon
-                                                    iconNode={item.icon}
-                                                    className="mr-2 h-4 w-4"
-                                                />
-                                            )}
-                                            {item.title}
-                                        </Link>
-                                        {page.url === item.href && (
-                                            <div className="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-black dark:bg-white"></div>
-                                        )}
+                                {authUser?.admin && (
+                                    <NavigationMenuItem className="relative flex h-full items-center">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <button
+                                                    className={cn(
+                                                        navigationMenuTriggerStyle(),
+                                                        isAdminRoute && activeItemStyles,
+                                                        'h-9 cursor-pointer px-3 border-l border-white/10 ml-2 pl-4 flex items-center gap-2',
+                                                    )}
+                                                >
+                                                    <LayoutGrid className="h-4 w-4" />
+                                                    Admin
+                                                    <ChevronDown className="h-3 w-3 opacity-70" />
+                                                </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent className="w-56" align="end">
+                                                <DropdownMenuLabel>Admin</DropdownMenuLabel>
+                                                <DropdownMenuSeparator />
+                                                {adminNavItems.map((item) => (
+                                                    <DropdownMenuItem asChild key={item.title}>
+                                                        <Link
+                                                            href={item.href}
+                                                            className="flex w-full items-center"
+                                                        >
+                                                            {item.icon && (
+                                                                <Icon
+                                                                    iconNode={item.icon}
+                                                                    className="mr-2 h-4 w-4"
+                                                                />
+                                                            )}
+                                                            {item.title}
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                ))}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </NavigationMenuItem>
-                                ))}
+                                )}
                             </NavigationMenuList>
                         </NavigationMenu>
                     </div>
