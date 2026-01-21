@@ -9,6 +9,7 @@ use App\Http\Controllers\LoanController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ReputationController;
 
 // Route::get('/', function () {
 //     return Inertia::render('welcome');
@@ -63,6 +64,10 @@ Route::middleware(['auth', 'require.2fa'])->group(function () {
     Route::get('wallet', [WalletController::class, 'index'])->name('wallet');
     Route::get('wallet/balance', [WalletController::class, 'balance'])->name('wallet.balance');
     Route::get('wallet/history', [WalletController::class, 'history'])->name('wallet.history');
+
+    // Reputation routes
+    Route::get('reputation/{user}', [ReputationController::class, 'show'])->name('reputation.show');
+    Route::get('reputation/{user}/rating', [ReputationController::class, 'getRating'])->name('reputation.rating');
 
     // Payment routes
     Route::prefix('payment')->name('payment.')->group(function () {

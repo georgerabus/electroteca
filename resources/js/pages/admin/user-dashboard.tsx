@@ -32,9 +32,29 @@ type User = {
     created_at: string;
 };
 
+type ReputationChange = {
+    id: number;
+    change: number;
+    reason: string;
+    created_at: string;
+};
+
+type Reputation = {
+    score: number;
+    rating: number;
+    stats: {
+        completed_loans: number;
+        completed_orders: number;
+        items_damaged: number;
+        returns_on_time: number;
+    };
+    history: ReputationChange[];
+};
+
 type UserDashboardPageProps = {
     user: User;
     loans: Loan[];
+    reputation: Reputation;
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -49,7 +69,7 @@ const STATUS_COLORS: Record<string, string> = {
     'Cancelled': 'bg-gray-500/20 text-gray-400',
 };
 
-export default function UserDashboard({ user, loans }: UserDashboardPageProps) {
+export default function UserDashboard({ user, loans, reputation }: UserDashboardPageProps) {
     return (
         <AppLayout breadcrumbs={[
             { title: 'Admin', href: '/admin' },
@@ -98,6 +118,61 @@ export default function UserDashboard({ user, loans }: UserDashboardPageProps) {
                                 {new Date(user.created_at).toLocaleDateString()}
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                {/* Reputation */}
+                <div className="mb-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-6 lg:col-span-1">
+                        <div className="text-sm text-gray-400 mb-1">Reputation Score</div>
+                        <div className="text-3xl font-bold text-white">{reputation.score}</div>
+                        <div className="text-sm text-gray-400">Rating: {reputation.rating}/100</div>
+                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <div className="text-gray-400">Completed Loans</div>
+                                <div className="text-white font-semibold">{reputation.stats.completed_loans}</div>
+                            </div>
+                            <div>
+                                <div className="text-gray-400">Completed Orders</div>
+                                <div className="text-white font-semibold">{reputation.stats.completed_orders}</div>
+                            </div>
+                            <div>
+                                <div className="text-gray-400">Items Damaged</div>
+                                <div className="text-white font-semibold">{reputation.stats.items_damaged}</div>
+                            </div>
+                            <div>
+                                <div className="text-gray-400">Returns On Time</div>
+                                <div className="text-white font-semibold">{reputation.stats.returns_on_time}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-6 lg:col-span-2">
+                        <div className="text-lg font-semibold text-white mb-3">Reputation Changes</div>
+                        {reputation.history.length === 0 ? (
+                            <div className="text-sm text-gray-400">No reputation changes recorded yet.</div>
+                        ) : (
+                            <div className="space-y-2">
+                                {reputation.history.map((entry) => {
+                                    const isPositive = entry.change >= 0;
+                                    const reason = entry.reason.replace(/_/g, ' ');
+
+                                    return (
+                                        <div
+                                            key={entry.id}
+                                            className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                                        >
+                                            <div>
+                                                <div className="text-white capitalize">{reason}</div>
+                                                <div className="text-gray-400">{entry.created_at}</div>
+                                            </div>
+                                            <div className={isPositive ? 'text-green-400 font-semibold' : 'text-red-400 font-semibold'}>
+                                                {isPositive ? '+' : ''}{entry.change}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -266,4 +341,3 @@ export default function UserDashboard({ user, loans }: UserDashboardPageProps) {
         </AppLayout>
     );
 }
-

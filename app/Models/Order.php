@@ -49,5 +49,23 @@ class Order extends Model
                 );
             }
         });
+
+        static::updated(function (Order $order) {
+            if (! $order->wasChanged('status')) {
+                return;
+            }
+
+            if ($order->status !== 'completed') {
+                return;
+            }
+
+            $user = $order->user;
+
+            if (! $user) {
+                return;
+            }
+
+            $user->incrementCompletedOrders();
+        });
     }
 }

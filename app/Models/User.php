@@ -3,16 +3,18 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Contracts\ReputableUser as ReputableUserContract;
+use App\Traits\ReputableUserTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class User extends Authenticatable
+class User extends Authenticatable implements ReputableUserContract
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, TwoFactorAuthenticatable;
+    use HasFactory, Notifiable, TwoFactorAuthenticatable, ReputableUserTrait;
 
     /**
      * The attributes that are mass assignable.
@@ -55,6 +57,11 @@ class User extends Authenticatable
             'wallet_balance' => 'decimal:2',
             'subscription_renews_at' => 'datetime',
             'admin' => 'boolean',
+            'reputation_score' => 'integer',
+            'completed_loans' => 'integer',
+            'completed_orders' => 'integer',
+            'items_damaged' => 'integer',
+            'returns_on_time' => 'integer',
         ];
     }
 

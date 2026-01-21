@@ -61,5 +61,35 @@ class LoanRequest extends Model
                 );
             }
         });
+
+        static::updated(function (LoanRequest $loanRequest) {
+            if (! $loanRequest->wasChanged('status')) {
+                return;
+            }
+
+            if (! in_array($loanRequest->status, ['Returned', 'Defective'], true)) {
+                return;
+            }
+
+            $user = $loanRequest->user;
+
+            if (! $user) {
+                return;
+            }
+
+            $user->incrementCompletedLoans();
+
+            if ((float) $loanRequest->damage_fee > 0) {
+                $user->incrementDamagedItems();
+            }
+
+            if ($loanRequest->returned_at && $loanRequest->period_to) {
+                $periodEnd = $loanRequest->period_to->copy()->endOfDay();
+
+                if ($loanRequest->returned_at->lte($periodEnd)) {
+                    $user->incrementReturnsOnTime();
+                }
+            }
+        });
     }
 }

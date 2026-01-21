@@ -133,6 +133,19 @@ class AdminController extends Controller
                 ];
             });
 
+        $reputationScore = $user->getReputation();
+        $reputationRating = max(0, min(100, $reputationScore));
+        $reputationChanges = $user->reputationChanges()
+            ->latest()
+            ->limit(10)
+            ->get()
+            ->map(fn($change) => [
+                'id' => $change->id,
+                'change' => $change->change,
+                'reason' => $change->reason,
+                'created_at' => $change->created_at?->format('Y-m-d H:i:s'),
+            ]);
+
         return Inertia::render('admin/user-dashboard', [
             'user' => [
                 'id' => $user->id,
@@ -140,6 +153,17 @@ class AdminController extends Controller
                 'email' => $user->email,
                 'wallet_balance' => number_format($user->wallet_balance, 2),
                 'created_at' => $user->created_at->format('Y-m-d H:i:s'),
+            ],
+            'reputation' => [
+                'score' => $reputationScore,
+                'rating' => $reputationRating,
+                'stats' => [
+                    'completed_loans' => (int) $user->completed_loans,
+                    'completed_orders' => (int) $user->completed_orders,
+                    'items_damaged' => (int) $user->items_damaged,
+                    'returns_on_time' => (int) $user->returns_on_time,
+                ],
+                'history' => $reputationChanges,
             ],
             'loans' => $loans,
         ]);
