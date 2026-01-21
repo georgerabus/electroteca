@@ -1,7 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { products } from '@/routes';
-import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { ChangeEvent, useMemo, useState } from 'react';
 import { ShoppingCart, Star } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
@@ -317,6 +317,8 @@ export default function Products({
     categories = ['All categories'],
     filters = {},
 }: ProductsPageProps) {
+    const { auth } = usePage<SharedData>().props;
+    const reputationDiscount = Math.max(0, Math.round(Number(auth.user?.reputation_discount_percent ?? 0)));
     const [category, setCategory] = useState(
         filters.category || 'All categories',
     );
@@ -325,12 +327,6 @@ export default function Products({
     );
     const [sort, setSort] = useState(filters.sort || 'name');
     const [query, setQuery] = useState(filters.search || '');
-    const promotions = [
-        { id: 'none', label: 'No promotion', percent: 0 },
-        { id: 'bf10', label: 'Black Friday -10%', percent: 10 },
-        { id: 'holiday15', label: 'Holiday -15%', percent: 15 },
-    ];
-    const [selectedPromotion, setSelectedPromotion] = useState(promotions[0].id);
 
     const products = useMemo(() => {
         let filtered = [...initialProducts];
@@ -389,6 +385,14 @@ export default function Products({
                         {products.length === 1 ? '' : 's'}
                     </span>
                 </div>
+                {reputationDiscount > 0 && (
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm text-black/80 dark:text-red-100">
+                        <span>Reputation discount: {reputationDiscount}% off in the shop.</span>
+                        <Link href="/reputation" className="text-red-600 hover:underline">
+                            View reputation
+                        </Link>
+                    </div>
+                )}
 
                 {/* toolbar */}
                 <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
@@ -425,19 +429,6 @@ export default function Products({
                         ))}
                     </ToolbarSelect>
 
-                    <div className="relative w-full md:w-72">
-                        <select
-                            value={selectedPromotion}
-                            onChange={(e) => setSelectedPromotion(e.target.value)}
-                            className="peer w-full appearance-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-black dark:text-white backdrop-blur transition outline-none hover:bg-white/7 focus:border-white/20"
-                        >
-                            {promotions.map((p) => (
-                                <option key={p.id} value={p.id}>{p.label}</option>
-                            ))}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center opacity-60">▾</div>
-                    </div>
-
                     <input
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
@@ -449,9 +440,6 @@ export default function Products({
                 {/* products grid */}
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {products.map((product, idx) => {
-                        // Apply discount only to first two visible products
-                        const promo = promotions.find((p) => p.id === selectedPromotion) || promotions[0];
-                        const applyDiscount = promo.percent > 0 && idx < 2;
                         // Demo ratings to display when backend doesn't supply avg_rating
                         const demoRatings = [4.5, 5, 3, 3.5];
                         const demoRating = demoRatings[idx % demoRatings.length];
@@ -459,7 +447,7 @@ export default function Products({
                             <ProductCardWithDiscount
                                 key={product.id}
                                 product={product}
-                                discountPercent={applyDiscount ? promo.percent : undefined}
+                                discountPercent={reputationDiscount > 0 ? reputationDiscount : undefined}
                                 demoRating={demoRating}
                             />
                         );

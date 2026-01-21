@@ -89,7 +89,7 @@ class CheckoutController extends Controller
                 }
 
                 // Calculate deposit for this product (multiply by quantity)
-                $deposit = $this->loanService->calculateDeposit($product);
+                $deposit = $this->loanService->calculateDepositForUser($product, $user);
                 $totalDeposit += ($deposit * $quantity);
             }
 

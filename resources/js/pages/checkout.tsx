@@ -10,6 +10,8 @@ type CheckoutPageProps = {
         id: number;
         name: string;
         price: string;
+        original_price?: string;
+        discountPercent?: number;
         currency: string;
         quantity: number;
         subtotal: string;
@@ -24,6 +26,7 @@ export default function Checkout({ items: serverItems, total: serverTotal, curre
     const { auth } = usePage<SharedData>().props;
     const { cart, totalPrice, clearCart } = useCart();
     const [cartLoaded, setCartLoaded] = useState(false);
+    const reputationDiscount = Math.max(0, Math.round(Number(auth.user?.reputation_discount_percent ?? 0)));
 
     // Wait for cart to load from localStorage
     useEffect(() => {
@@ -35,15 +38,26 @@ export default function Checkout({ items: serverItems, total: serverTotal, curre
     }, []);
 
     // Calculate items from cart
-    const items = cart.map(item => ({
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        currency: item.currency,
-        quantity: item.quantity,
-        subtotal: (parseFloat(item.price) * item.quantity).toFixed(2),
-        image_url: item.image_url,
-    }));
+    const items = cart.map(item => {
+        const basePriceStr = item.original_price ?? item.price ?? '0';
+        const base = parseFloat(basePriceStr || '0');
+        const discount = item.discountPercent && item.discountPercent > 0 ? item.discountPercent : 0;
+        const unitPrice = discount > 0
+            ? base * (1 - discount / 100)
+            : parseFloat(item.price || base.toFixed(2) || '0');
+
+        return {
+            id: item.id,
+            name: item.name,
+            price: unitPrice.toFixed(2),
+            original_price: discount > 0 ? basePriceStr : undefined,
+            discountPercent: discount > 0 ? discount : undefined,
+            currency: item.currency,
+            quantity: item.quantity,
+            subtotal: (unitPrice * item.quantity).toFixed(2),
+            image_url: item.image_url,
+        };
+    });
 
     const total = totalPrice;
     const currency = cart.length > 0 ? cart[0].currency : 'MDL';
@@ -184,10 +198,25 @@ export default function Checkout({ items: serverItems, total: serverTotal, curre
                                             )}
                                         </div>
                                         <div className="flex-1">
-                                            <div className="font-semibold text-white">{item.name}</div>
-                                            <div className="text-sm text-gray-400">
-                                                {item.price} {item.currency} x {item.quantity}
-                                            </div>
+                                        <div className="font-semibold text-white">{item.name}</div>
+                                        <div className="text-sm text-gray-400">
+                                            {item.discountPercent && item.discountPercent > 0 ? (
+                                                <>
+                                                    <span className="text-xs text-gray-500 line-through mr-2">
+                                                        {item.original_price} {item.currency}
+                                                    </span>
+                                                    <span className="font-medium text-white">
+                                                        {item.price} {item.currency}
+                                                    </span>
+                                                    <span className="ml-2">x {item.quantity}</span>
+                                                    <span className="ml-2 text-xs text-red-400">
+                                                        -{item.discountPercent}%
+                                                    </span>
+                                                </>
+                                            ) : (
+                                                <>{item.price} {item.currency} x {item.quantity}</>
+                                            )}
+                                        </div>
                                         </div>
                                         <div className="font-semibold text-white">
                                             {item.subtotal} {item.currency}
@@ -218,6 +247,12 @@ export default function Checkout({ items: serverItems, total: serverTotal, curre
                                     <span className="text-gray-400">Order Total:</span>
                                     <span className="font-semibold text-white">{total.toFixed(2)} CR</span>
                                 </div>
+                                {reputationDiscount > 0 && (
+                                    <div className="flex items-center justify-between text-sm text-red-300">
+                                        <span>Reputation discount:</span>
+                                        <span>-{reputationDiscount}%</span>
+                                    </div>
+                                )}
                                 <div className="flex items-center justify-between pt-3 border-t border-white/10">
                                     <span className="text-gray-400">Remaining Balance:</span>
                                     <span className={`font-semibold ${walletBalance >= total ? 'text-green-400' : 'text-red-400'}`}>
@@ -342,4 +377,3 @@ export default function Checkout({ items: serverItems, total: serverTotal, curre
         </AppLayout>
     );
 }
-

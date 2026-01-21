@@ -25,6 +25,7 @@ type ProductShowPageProps = {
 
 export default function ProductShow({ product }: ProductShowPageProps) {
     const { auth } = usePage<SharedData>().props;
+    const reputationDiscount = Math.max(0, Math.round(Number(auth.user?.reputation_discount_percent ?? 0)));
     const [addedToCart, setAddedToCart] = useState(false);
     const [borrowInfo, setBorrowInfo] = useState<{
         can_borrow: boolean;
@@ -38,6 +39,11 @@ export default function ProductShow({ product }: ProductShowPageProps) {
     const [borrowPeriodTo, setBorrowPeriodTo] = useState('');
     const [borrowDetails, setBorrowDetails] = useState('');
     const { addToCart } = useCart();
+    const priceNum = Number.parseFloat(product.price);
+    const hasDiscount = reputationDiscount > 0 && Number.isFinite(priceNum);
+    const discountedPrice = hasDiscount
+        ? (priceNum * (1 - reputationDiscount / 100)).toFixed(2)
+        : null;
 
     // --- Reviews (client-side sample implementation) ---
     type Review = {
@@ -124,13 +130,16 @@ export default function ProductShow({ product }: ProductShowPageProps) {
     };
 
     const handleAddToCart = () => {
+        const priceToUse = hasDiscount && discountedPrice ? discountedPrice : product.price;
         addToCart(
             {
                 id: product.id,
                 name: product.name,
-                price: product.price,
+                price: priceToUse,
                 currency: product.currency,
                 image_url: product.image_url,
+                discountPercent: hasDiscount ? reputationDiscount : undefined,
+                original_price: hasDiscount ? product.price : undefined,
             },
             1,
         );
@@ -233,8 +242,24 @@ export default function ProductShow({ product }: ProductShowPageProps) {
                             <h1 className="mb-4 text-3xl font-bold text-white">{product.name}</h1>
 
                             {/* Price */}
-                            <div className="mb-6 text-3xl font-bold text-blue-500">
-                                {product.price} {product.currency}
+                            <div className="mb-6">
+                                {hasDiscount ? (
+                                    <div className="flex flex-wrap items-baseline gap-3">
+                                        <div className="text-sm text-gray-500 line-through">
+                                            {product.price} {product.currency}
+                                        </div>
+                                        <div className="text-3xl font-bold text-red-500">
+                                            {discountedPrice} {product.currency}
+                                        </div>
+                                        <span className="rounded-full bg-red-500/10 px-2 py-1 text-xs font-semibold text-red-400">
+                                            -{reputationDiscount}%
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div className="text-3xl font-bold text-blue-500">
+                                        {product.price} {product.currency}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Description */}
@@ -446,5 +471,4 @@ export default function ProductShow({ product }: ProductShowPageProps) {
         </AppLayout>
     );
 }
-
 

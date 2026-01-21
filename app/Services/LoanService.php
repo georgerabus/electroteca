@@ -4,10 +4,12 @@ namespace App\Services;
 
 use App\Models\LoanRequest;
 use App\Models\Product;
+use App\Models\ReputationTier;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class LoanService
 {
@@ -20,12 +22,20 @@ class LoanService
         return round((float) $product->price * $multiplier, 2);
     }
 
+    public function calculateDepositForUser(Product $product, User $user): float
+    {
+        $discountPercent = $this->getUserDiscountPercent($user);
+        $multiplier = 1 - ($discountPercent / 100);
+
+        return $this->calculateDeposit($product, $multiplier);
+    }
+
     /**
      * Check if user can borrow a product (has enough balance and product is available).
      */
     public function canBorrow(User $user, Product $product): array
     {
-        $deposit = $this->calculateDeposit($product);
+        $deposit = $this->calculateDepositForUser($product, $user);
         $canBorrow = true;
         $reasons = [];
 
@@ -101,6 +111,15 @@ class LoanService
 
             return $loanRequest->fresh();
         });
+    }
+
+    private function getUserDiscountPercent(User $user): int
+    {
+        if (! Schema::hasTable('reputation_tiers')) {
+            return 0;
+        }
+
+        return ReputationTier::discountForScore($user->getReputation());
     }
 
     /**
@@ -289,4 +308,3 @@ class LoanService
         });
     }
 }
-
