@@ -24,6 +24,26 @@ type Row = {
     details?: string;
 };
 
+type ReputationChange = {
+    id: number;
+    change: number;
+    reason: string;
+    created_at: string;
+};
+
+type Reputation = {
+    score: number;
+    rating: number;
+    stats: {
+        completed_loans: number;
+        completed_orders: number;
+        items_damaged: number;
+        returns_on_time: number;
+        adjustment: number;
+    };
+    history: ReputationChange[];
+};
+
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: dashboard().url },
 ];
@@ -31,6 +51,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 type DashboardPageProps = {
     loanRequests: Row[];
     products: string[];
+    reputation?: Reputation | null;
     filters?: {
         status?: string;
         product?: string;
@@ -65,6 +86,14 @@ const statusTone: Record<Status, string> = {
     Late: 'text-amber-300 bg-amber-300/10 ring-1 ring-amber-300/20',
     Requested: 'text-zinc-300 bg-zinc-300/10 ring-1 ring-zinc-300/20',
     Cancelled: 'text-zinc-400 bg-zinc-400/10 ring-1 ring-zinc-400/20',
+};
+
+const getReputationLabel = (rating: number) => {
+    if (rating >= 80) return 'Trusted';
+    if (rating >= 60) return 'Reliable';
+    if (rating >= 40) return 'Steady';
+    if (rating >= 20) return 'New';
+    return 'At Risk';
 };
 
 function Badge({
@@ -103,7 +132,7 @@ function ToolbarSelect(
 }
 
 // ---------- page ----------
-export default function Dashboard({ loanRequests, products, filters }: DashboardPageProps) {
+export default function Dashboard({ loanRequests, products, filters, reputation }: DashboardPageProps) {
     const [status, setStatus] = useState<StatusOption>((filters?.status as StatusOption) || 'All');
     const [product, setProduct] = useState<ProductOption>(filters?.product || 'All products');
     const [query, setQuery] = useState(filters?.search || '');
@@ -138,6 +167,93 @@ export default function Dashboard({ loanRequests, products, filters }: Dashboard
             <Head title="Dashboard" />
 
             <div className="mx-auto max-w-[1200px] p-4 md:p-6">
+                {reputation && (
+                    <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.6)] ring-1 ring-white/10 backdrop-blur">
+                            <div className="text-sm text-black/60 dark:text-gray-400">Your Reputation</div>
+                            <div className="mt-2 flex items-end justify-between gap-3">
+                                <div>
+                                    <div className="text-3xl font-bold text-black dark:text-white">{reputation.score}</div>
+                                    <div className="text-sm text-black/60 dark:text-gray-400">
+                                        {getReputationLabel(reputation.rating)} • {reputation.rating}/100
+                                    </div>
+                                </div>
+                                <div className="text-xs text-black/60 dark:text-gray-400 text-right">
+                                    +10 loan • +5 order • -20 damage
+                                </div>
+                            </div>
+                            <div className="mt-4 h-2 rounded-full bg-black/10 dark:bg-white/10">
+                                <div
+                                    className="h-2 rounded-full bg-emerald-400 transition-all"
+                                    style={{ width: `${reputation.rating}%` }}
+                                />
+                            </div>
+                            <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-black/60 dark:text-gray-400">
+                                <div>
+                                    <div>Completed loans</div>
+                                    <div className="text-black dark:text-white font-semibold">{reputation.stats.completed_loans}</div>
+                                </div>
+                                <div>
+                                    <div>Completed orders</div>
+                                    <div className="text-black dark:text-white font-semibold">{reputation.stats.completed_orders}</div>
+                                </div>
+                                <div>
+                                    <div>Items damaged</div>
+                                    <div className="text-black dark:text-white font-semibold">{reputation.stats.items_damaged}</div>
+                                </div>
+                                <div>
+                                    <div>On-time returns</div>
+                                    <div className="text-black dark:text-white font-semibold">{reputation.stats.returns_on_time}</div>
+                                </div>
+                                <div>
+                                    <div>Admin adjustments</div>
+                                    <div className="text-black dark:text-white font-semibold">{reputation.stats.adjustment}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.6)] ring-1 ring-white/10 backdrop-blur">
+                            <div className="text-lg font-semibold text-black dark:text-white mb-3">How it works</div>
+                            <div className="space-y-2 text-sm text-black/60 dark:text-gray-400">
+                                <div>Each completed loan adds <span className="text-black dark:text-white font-semibold">+10</span>.</div>
+                                <div>Each completed order adds <span className="text-black dark:text-white font-semibold">+5</span>.</div>
+                                <div>Each damaged item subtracts <span className="text-black dark:text-white font-semibold">-20</span>.</div>
+                                <div>On-time returns are tracked for insights.</div>
+                                <div>Admin adjustments can add or remove points when needed.</div>
+                            </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.6)] ring-1 ring-white/10 backdrop-blur">
+                            <div className="text-lg font-semibold text-black dark:text-white mb-3">Recent Changes</div>
+                            {reputation.history.length === 0 ? (
+                                <div className="text-sm text-black/60 dark:text-gray-400">No reputation changes yet.</div>
+                            ) : (
+                                <div className="space-y-2 text-sm">
+                                    {reputation.history.map((entry) => {
+                                        const isPositive = entry.change >= 0;
+                                        const reason = entry.reason.replace(/_/g, ' ');
+
+                                        return (
+                                            <div
+                                                key={entry.id}
+                                                className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2"
+                                            >
+                                                <div>
+                                                    <div className="text-black dark:text-white capitalize">{reason}</div>
+                                                    <div className="text-xs text-black/60 dark:text-gray-400">{entry.created_at}</div>
+                                                </div>
+                                                <div className={isPositive ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
+                                                    {isPositive ? '+' : ''}{entry.change}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* header */}
                 <div className="mb-4 flex items-center justify-between gap-3">
                     <h1 className="text-2xl font-semibold tracking-tight text-black dark:text-white">

@@ -1,7 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router } from '@inertiajs/react';
 import { User, Package, DollarSign, Calendar, ArrowLeft, Check, X, PackageCheck } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 
 type Loan = {
     id: number;
@@ -47,6 +47,7 @@ type Reputation = {
         completed_orders: number;
         items_damaged: number;
         returns_on_time: number;
+        adjustment: number;
     };
     history: ReputationChange[];
 };
@@ -70,6 +71,33 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function UserDashboard({ user, loans, reputation }: UserDashboardPageProps) {
+    const [adjustmentChange, setAdjustmentChange] = useState('');
+    const [adjustmentReason, setAdjustmentReason] = useState('');
+
+    const submitAdjustment = () => {
+        const changeValue = parseInt(adjustmentChange, 10);
+
+        if (Number.isNaN(changeValue) || changeValue === 0) {
+            alert('Enter a non-zero number for the adjustment.');
+            return;
+        }
+
+        router.post(
+            `/admin/users/${user.id}/reputation/adjust`,
+            {
+                change: changeValue,
+                reason: adjustmentReason || null,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setAdjustmentChange('');
+                    setAdjustmentReason('');
+                },
+            },
+        );
+    };
+
     return (
         <AppLayout breadcrumbs={[
             { title: 'Admin', href: '/admin' },
@@ -144,10 +172,46 @@ export default function UserDashboard({ user, loans, reputation }: UserDashboard
                                 <div className="text-gray-400">Returns On Time</div>
                                 <div className="text-white font-semibold">{reputation.stats.returns_on_time}</div>
                             </div>
+                            <div>
+                                <div className="text-gray-400">Adjustments</div>
+                                <div className="text-white font-semibold">{reputation.stats.adjustment}</div>
+                            </div>
                         </div>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-6 lg:col-span-2">
                         <div className="text-lg font-semibold text-white mb-3">Reputation Changes</div>
+                        <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-4">
+                            <div className="text-sm text-gray-400 mb-3">Manual adjustment</div>
+                            <div className="flex flex-col gap-3 md:flex-row md:items-end">
+                                <div className="flex-1">
+                                    <label className="block text-xs text-gray-400 mb-1">Change (+/-)</label>
+                                    <input
+                                        type="number"
+                                        value={adjustmentChange}
+                                        onChange={(e) => setAdjustmentChange(e.target.value)}
+                                        placeholder="e.g. 10 or -5"
+                                        className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-500"
+                                    />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="block text-xs text-gray-400 mb-1">Reason (optional)</label>
+                                    <input
+                                        type="text"
+                                        value={adjustmentReason}
+                                        onChange={(e) => setAdjustmentReason(e.target.value)}
+                                        placeholder="manual_review"
+                                        className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-500"
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={submitAdjustment}
+                                    className="rounded-lg bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20 transition"
+                                >
+                                    Apply
+                                </button>
+                            </div>
+                        </div>
                         {reputation.history.length === 0 ? (
                             <div className="text-sm text-gray-400">No reputation changes recorded yet.</div>
                         ) : (

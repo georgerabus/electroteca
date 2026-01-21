@@ -134,7 +134,7 @@ class AdminController extends Controller
             });
 
         $reputationScore = $user->getReputation();
-        $reputationRating = max(0, min(100, $reputationScore));
+        $reputationRating = $user->getReputationRating();
         $reputationChanges = $user->reputationChanges()
             ->latest()
             ->limit(10)
@@ -162,11 +162,26 @@ class AdminController extends Controller
                     'completed_orders' => (int) $user->completed_orders,
                     'items_damaged' => (int) $user->items_damaged,
                     'returns_on_time' => (int) $user->returns_on_time,
+                    'adjustment' => (int) $user->reputation_adjustment,
                 ],
                 'history' => $reputationChanges,
             ],
             'loans' => $loans,
         ]);
+    }
+
+    public function adjustReputation(Request $request, User $user)
+    {
+        $validated = $request->validate([
+            'change' => ['required', 'integer', 'not_in:0'],
+            'reason' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $reason = $validated['reason'] ?: 'manual_adjustment';
+
+        $user->adjustReputation((int) $validated['change'], $reason);
+
+        return back()->with('success', 'Reputation updated.');
     }
 
     public function loans(Request $request)

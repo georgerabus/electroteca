@@ -62,6 +62,7 @@ class User extends Authenticatable implements ReputableUserContract
             'completed_orders' => 'integer',
             'items_damaged' => 'integer',
             'returns_on_time' => 'integer',
+            'reputation_adjustment' => 'integer',
         ];
     }
 

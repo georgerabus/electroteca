@@ -17,13 +17,29 @@ trait ReputableUserTrait
         return (int) ($this->reputation_score ?? 0);
     }
 
+    public function getReputationRating(): int
+    {
+        $score = $this->getReputation();
+
+        if ($score < 0) {
+            return 0;
+        }
+
+        if ($score > 100) {
+            return 100;
+        }
+
+        return $score;
+    }
+
     public function calculateReputationScore(): int
     {
         $completedLoans = (int) ($this->completed_loans ?? 0);
         $completedOrders = (int) ($this->completed_orders ?? 0);
         $itemsDamaged = (int) ($this->items_damaged ?? 0);
+        $adjustment = (int) ($this->reputation_adjustment ?? 0);
 
-        return ($completedLoans * 10) + ($completedOrders * 5) - ($itemsDamaged * 20);
+        return ($completedLoans * 10) + ($completedOrders * 5) - ($itemsDamaged * 20) + $adjustment;
     }
 
     public function recalculateReputationScore(string $reason = 'recalculated'): int
@@ -43,6 +59,17 @@ trait ReputableUserTrait
         }
 
         return $newScore;
+    }
+
+    public function adjustReputation(int $change, string $reason = 'manual_adjustment'): int
+    {
+        if ($change === 0) {
+            return $this->getReputation();
+        }
+
+        $this->increment('reputation_adjustment', $change);
+
+        return $this->recalculateReputationScore($reason);
     }
 
     public function incrementCompletedLoans(int $by = 1): void

@@ -92,6 +92,7 @@ Route::middleware(['auth', 'verified', 'require.2fa'])->group(function () {
             Route::get('users', [AdminController::class, 'users'])->name('users');
             Route::get('users/{user}/dashboard', [AdminController::class, 'userDashboard'])->name('user.dashboard');
             Route::get('loans', [AdminController::class, 'loans'])->name('loans');
+            Route::post('users/{user}/reputation/adjust', [AdminController::class, 'adjustReputation'])->name('users.reputation.adjust');
             
             // Product management
             Route::post('products', [AdminController::class, 'storeProduct'])->name('products.store');

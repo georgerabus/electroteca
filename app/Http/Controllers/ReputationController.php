@@ -16,7 +16,7 @@ class ReputationController extends Controller
         $this->authorizeViewer($request, $user);
 
         $score = $user->getReputation();
-        $rating = $this->normalizeScore($score);
+        $rating = $user->getReputationRating();
 
         $history = $user->reputationChanges->map(function ($change) {
             return [
@@ -40,6 +40,7 @@ class ReputationController extends Controller
                 'completed_orders' => (int) $user->completed_orders,
                 'items_damaged' => (int) $user->items_damaged,
                 'returns_on_time' => (int) $user->returns_on_time,
+                'adjustment' => (int) $user->reputation_adjustment,
             ],
             'history' => $history,
         ]);
@@ -52,7 +53,7 @@ class ReputationController extends Controller
         $this->authorizeViewer($request, $user);
 
         return response()->json([
-            'rating' => $this->normalizeScore($user->getReputation()),
+            'rating' => $user->getReputationRating(),
         ]);
     }
 
@@ -65,16 +66,4 @@ class ReputationController extends Controller
         }
     }
 
-    private function normalizeScore(int $score): int
-    {
-        if ($score < 0) {
-            return 0;
-        }
-
-        if ($score > 100) {
-            return 100;
-        }
-
-        return $score;
-    }
 }
