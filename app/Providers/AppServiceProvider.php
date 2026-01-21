@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use Inertia\Inertia;
 use App\Mail\WelcomeMail;
+use App\Services\EscrowService;
+use App\Services\DisputeService;
+use App\Services\WalletService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Mail;
@@ -18,7 +21,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Register EscrowService
+        $this->app->singleton(EscrowService::class, function ($app) {
+            return new EscrowService($app->make(WalletService::class));
+        });
+
+        // Register DisputeService
+        $this->app->singleton(DisputeService::class, function ($app) {
+            return new DisputeService($app->make(EscrowService::class));
+        });
     }
 
     /**

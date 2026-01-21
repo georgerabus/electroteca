@@ -14,15 +14,22 @@ class Order extends Model
     protected $fillable = [
         'order_number',
         'user_id',
+        'seller_id',
         'status',
         'total_amount',
+        'escrow_amount',
         'currency',
         'shipping_address',
         'notes',
+        'escrow_status',
+        'return_deadline',
+        'inspection_period_days',
     ];
 
     protected $casts = [
         'total_amount' => 'decimal:2',
+        'escrow_amount' => 'decimal:2',
+        'return_deadline' => 'datetime',
     ];
 
     public function user(): BelongsTo
@@ -33,6 +40,29 @@ class Order extends Model
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function seller(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'seller_id');
+    }
+
+    public function disputes(): HasMany
+    {
+        return $this->hasMany(Dispute::class);
+    }
+
+    public function escrowTransactions(): HasMany
+    {
+        return $this->hasMany(EscrowTransaction::class);
+    }
+
+    /**
+     * Get the active escrow transaction for this order
+     */
+    public function activeEscrow(): ?EscrowTransaction
+    {
+        return $this->escrowTransactions()->whereIn('status', ['held', 'awaiting_resolution'])->first();
     }
 
     protected static function boot()
