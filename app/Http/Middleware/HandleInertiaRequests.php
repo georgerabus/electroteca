@@ -2,9 +2,11 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\ReputationTier;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Illuminate\Support\Facades\Schema;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -41,6 +43,13 @@ class HandleInertiaRequests extends Middleware
         $user = $request->user();
         
         // Ensure wallet_balance and subscription fields are included
+        $reputationScore = $user ? $user->getReputation() : null;
+        $reputationTier = null;
+
+        if ($user && Schema::hasTable('reputation_tiers')) {
+            $reputationTier = ReputationTier::tierForScore($reputationScore ?? 0);
+        }
+
         $userData = $user ? [
             'id' => $user->id,
             'name' => $user->name,
@@ -54,6 +63,15 @@ class HandleInertiaRequests extends Middleware
             'subscription_plan' => $user->subscription_plan,
             'subscription_renews_at' => $user->subscription_renews_at?->toIso8601String(),
             'admin' => (bool) ($user->admin ?? false),
+            'reputation_score' => $reputationScore ?? 0,
+            'reputation_rating' => $user->getReputationRating(),
+            'reputation_discount_percent' => $reputationTier?->discount_percent ?? 0,
+            'reputation_tier' => $reputationTier ? [
+                'id' => $reputationTier->id,
+                'name' => $reputationTier->name,
+                'min_score' => $reputationTier->min_score,
+                'discount_percent' => $reputationTier->discount_percent,
+            ] : null,
         ] : null;
 
         return [

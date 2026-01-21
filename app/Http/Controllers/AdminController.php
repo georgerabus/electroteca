@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\LoanRequest;
 use App\Models\Product;
 use App\Models\User;
+use App\Models\ReputationTier;
 use App\Services\LoanService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -182,6 +183,61 @@ class AdminController extends Controller
         $user->adjustReputation((int) $validated['change'], $reason);
 
         return back()->with('success', 'Reputation updated.');
+    }
+
+    public function reputationTiers()
+    {
+        $tiers = ReputationTier::orderBy('min_score')
+            ->get()
+            ->map(fn($tier) => [
+                'id' => $tier->id,
+                'name' => $tier->name,
+                'min_score' => $tier->min_score,
+                'discount_percent' => $tier->discount_percent,
+                'description' => $tier->description,
+                'is_active' => $tier->is_active,
+            ]);
+
+        return Inertia::render('admin/reputation-tiers', [
+            'tiers' => $tiers,
+        ]);
+    }
+
+    public function storeReputationTier(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'min_score' => ['required', 'integer'],
+            'discount_percent' => ['required', 'integer', 'min:0', 'max:100'],
+            'description' => ['nullable', 'string', 'max:255'],
+            'is_active' => ['boolean'],
+        ]);
+
+        ReputationTier::create($validated);
+
+        return back()->with('success', 'Reputation tier created.');
+    }
+
+    public function updateReputationTier(Request $request, ReputationTier $reputationTier)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'min_score' => ['required', 'integer'],
+            'discount_percent' => ['required', 'integer', 'min:0', 'max:100'],
+            'description' => ['nullable', 'string', 'max:255'],
+            'is_active' => ['boolean'],
+        ]);
+
+        $reputationTier->update($validated);
+
+        return back()->with('success', 'Reputation tier updated.');
+    }
+
+    public function destroyReputationTier(ReputationTier $reputationTier)
+    {
+        $reputationTier->delete();
+
+        return back()->with('success', 'Reputation tier deleted.');
     }
 
     public function loans(Request $request)

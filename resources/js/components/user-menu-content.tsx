@@ -10,7 +10,7 @@ import { logout } from '@/routes';
 import { edit } from '@/routes/profile';
 import { type User } from '@/types';
 import { Link, router, usePage } from '@inertiajs/react';
-import { LogOut, Settings, LogIn, UserPlus } from 'lucide-react';
+import { BadgePercent, LogOut, Settings, LogIn, UserPlus } from 'lucide-react';
 
 interface UserMenuContentProps {
     user?: User | null;
@@ -19,6 +19,11 @@ interface UserMenuContentProps {
 export function UserMenuContent({ user }: UserMenuContentProps) {
     const { csrf_token: csrfToken } = usePage().props as { csrf_token?: string };
     const cleanup = useMobileNavigation();
+    const reputationRating = Math.round(Number(user?.reputation_rating ?? 0));
+    const reputationDiscount = Math.max(0, Math.round(Number(user?.reputation_discount_percent ?? 0)));
+    const reputationMeta = reputationDiscount > 0
+        ? `${reputationRating}/100 - ${reputationDiscount}% off`
+        : `${reputationRating}/100`;
 
     const handleLogout = () => {
         cleanup();
@@ -76,6 +81,22 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
+                <DropdownMenuItem asChild>
+                    <Link
+                        className="flex w-full items-center justify-between"
+                        href="/reputation"
+                        onClick={cleanup}
+                        prefetch
+                    >
+                        <span className="flex items-center">
+                            <BadgePercent className="mr-2" />
+                            Your Reputation
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                            {reputationMeta}
+                        </span>
+                    </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                     <Link
                         className="block w-full"

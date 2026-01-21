@@ -66,6 +66,7 @@ Route::middleware(['auth', 'require.2fa'])->group(function () {
     Route::get('wallet/history', [WalletController::class, 'history'])->name('wallet.history');
 
     // Reputation routes
+    Route::get('reputation', [ReputationController::class, 'index'])->name('reputation.index');
     Route::get('reputation/{user}', [ReputationController::class, 'show'])->name('reputation.show');
     Route::get('reputation/{user}/rating', [ReputationController::class, 'getRating'])->name('reputation.rating');
 
@@ -93,6 +94,10 @@ Route::middleware(['auth', 'verified', 'require.2fa'])->group(function () {
             Route::get('users/{user}/dashboard', [AdminController::class, 'userDashboard'])->name('user.dashboard');
             Route::get('loans', [AdminController::class, 'loans'])->name('loans');
             Route::post('users/{user}/reputation/adjust', [AdminController::class, 'adjustReputation'])->name('users.reputation.adjust');
+            Route::get('reputation-tiers', [AdminController::class, 'reputationTiers'])->name('reputation-tiers.index');
+            Route::post('reputation-tiers', [AdminController::class, 'storeReputationTier'])->name('reputation-tiers.store');
+            Route::put('reputation-tiers/{reputationTier}', [AdminController::class, 'updateReputationTier'])->name('reputation-tiers.update');
+            Route::delete('reputation-tiers/{reputationTier}', [AdminController::class, 'destroyReputationTier'])->name('reputation-tiers.destroy');
             
             // Product management
             Route::post('products', [AdminController::class, 'storeProduct'])->name('products.store');

@@ -32,7 +32,7 @@ import { cn } from '@/lib/utils';
 import { dashboard, products } from '@/routes';
 import { type BreadcrumbItem, type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Menu, Search, ShoppingCart, Package, Wallet, UserCircle2 } from 'lucide-react';
+import { BadgePercent, BookOpen, Folder, LayoutGrid, Menu, Search, ShoppingCart, Package, Wallet, UserCircle2 } from 'lucide-react';
 import ThemeToggleButton from '@/components/ui/theme-toggle';
 import AppLogo from './app-logo';
 import AppLogoIcon from './app-logo-icon';
@@ -78,6 +78,11 @@ const adminNavItems: NavItem[] = [
         title: 'Admin Panel',
         href: '/admin',
         icon: LayoutGrid,
+    },
+    {
+        title: 'Reputation',
+        href: '/admin/reputation-tiers',
+        icon: BadgePercent,
     },
 ];
 

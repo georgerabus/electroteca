@@ -73,41 +73,11 @@ class DashboardController extends Controller
             ->values();
 
         $products = Product::pluck('name')->unique()->values();
-        $reputation = null;
-
-        if ($user) {
-            $reputationScore = $user->getReputation();
-            $reputationRating = $user->getReputationRating();
-            $reputationChanges = $user->reputationChanges()
-                ->latest()
-                ->limit(8)
-                ->get()
-                ->map(fn($change) => [
-                    'id' => $change->id,
-                    'change' => $change->change,
-                    'reason' => $change->reason,
-                    'created_at' => $change->created_at?->format('Y-m-d H:i:s'),
-                ]);
-
-            $reputation = [
-                'score' => $reputationScore,
-                'rating' => $reputationRating,
-                'stats' => [
-                    'completed_loans' => (int) $user->completed_loans,
-                    'completed_orders' => (int) $user->completed_orders,
-                    'items_damaged' => (int) $user->items_damaged,
-                    'returns_on_time' => (int) $user->returns_on_time,
-                    'adjustment' => (int) $user->reputation_adjustment,
-                ],
-                'history' => $reputationChanges,
-            ];
-        }
 
         return Inertia::render('dashboard', [
             'loanRequests' => $loanRequests,
             'products' => $products,
             'filters' => $request->only(['status', 'product', 'search']),
-            'reputation' => $reputation,
         ]);
     }
 
