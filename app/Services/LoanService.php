@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\LoanRequest;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\ReputationTier;
 use App\Models\User;
@@ -13,6 +14,11 @@ use Illuminate\Support\Facades\Schema;
 
 class LoanService
 {
+    public function __construct(
+        private EscrowService $escrowService
+    ) {
+    }
+
     /**
      * Calculate the required deposit for a product loan.
      * Now uses 100% of product price (full amount).
@@ -68,49 +74,108 @@ class LoanService
     }
 
     /**
-     * Create a loan request and deduct deposit from user's wallet.
+     * Create a loan request and hold deposit in escrow.
      */
-    public function borrowProduct(User $user, Product $product, Carbon $periodFrom, Carbon $periodTo, ?string $details = null): LoanRequest
+    public function borrowProduct(
+        User $user,
+        Product $product,
+        Carbon $periodFrom,
+        Carbon $periodTo,
+        ?string $details = null,
+        array $orderData = []
+    ): LoanRequest
     {
         $check = $this->canBorrow($user, $product);
-        
+
         if (!$check['can_borrow']) {
             throw new \RuntimeException('Cannot borrow product: ' . implode(', ', $check['reasons']));
         }
 
         $deposit = $check['deposit_required'];
 
-        return DB::transaction(function () use ($user, $product, $periodFrom, $periodTo, $details, $deposit) {
-            // Deduct deposit from wallet
-            $transaction = $user->debitWallet($deposit, 'loan_deposit', [
-                'product_id' => $product->id,
-                'product_name' => $product->name,
-            ]);
+        return DB::transaction(function () use ($user, $product, $periodFrom, $periodTo, $details, $deposit, $orderData) {
+            $order = $this->createOrderForLoans(
+                user: $user,
+                totalAmount: $deposit,
+                currency: $product->currency ?? 'MDL',
+                shippingAddress: $orderData['shipping_address'] ?? null,
+                notes: $orderData['notes'] ?? $details
+            );
 
-            // Create loan request (auto-approved)
-            $loanRequest = LoanRequest::create([
-                'user_id' => $user->id,
-                'product_id' => $product->id,
-                'period_from' => $periodFrom,
-                'period_to' => $periodTo,
-                'details' => $details,
-                'status' => 'Approved',
-                'deposit_amount' => $deposit,
-                'approved_at' => now(),
-            ]);
-
-            // Decrease product stock
-            $product->decrement('stock_quantity');
-
-            Log::info('Loan request created', [
-                'loan_request_id' => $loanRequest->id,
-                'user_id' => $user->id,
-                'product_id' => $product->id,
-                'deposit' => $deposit,
-            ]);
-
-            return $loanRequest->fresh();
+            return $this->createLoanForOrder(
+                order: $order,
+                user: $user,
+                product: $product,
+                periodFrom: $periodFrom,
+                periodTo: $periodTo,
+                details: $details,
+                deposit: $deposit
+            );
         });
+    }
+
+    public function createOrderForLoans(
+        User $user,
+        float $totalAmount,
+        string $currency,
+        ?string $shippingAddress = null,
+        ?string $notes = null
+    ): Order {
+        $sellerId = $this->resolveSellerId();
+
+        return Order::create([
+            'user_id' => $user->id,
+            'seller_id' => $sellerId,
+            'status' => 'processing',
+            'total_amount' => $totalAmount,
+            'currency' => $currency,
+            'shipping_address' => $shippingAddress,
+            'notes' => $notes,
+        ]);
+    }
+
+    public function createLoanForOrder(
+        Order $order,
+        User $user,
+        Product $product,
+        Carbon $periodFrom,
+        Carbon $periodTo,
+        ?string $details,
+        float $deposit
+    ): LoanRequest {
+        $escrow = $this->escrowService->holdFunds($order, $deposit);
+
+        $order->items()->create([
+            'product_id' => $product->id,
+            'quantity' => 1,
+            'price' => $deposit,
+            'subtotal' => $deposit,
+        ]);
+
+        $loanRequest = LoanRequest::create([
+            'user_id' => $user->id,
+            'product_id' => $product->id,
+            'order_id' => $order->id,
+            'escrow_transaction_id' => $escrow->id,
+            'period_from' => $periodFrom,
+            'period_to' => $periodTo,
+            'details' => $details,
+            'status' => 'Approved',
+            'deposit_amount' => $deposit,
+            'approved_at' => now(),
+        ]);
+
+        $product->decrement('stock_quantity');
+
+        Log::info('Loan request created', [
+            'loan_request_id' => $loanRequest->id,
+            'order_id' => $order->id,
+            'user_id' => $user->id,
+            'product_id' => $product->id,
+            'deposit' => $deposit,
+        ]);
+
+        return $loanRequest->fresh();
     }
 
     private function getUserDiscountPercent(User $user): int
@@ -120,6 +185,17 @@ class LoanService
         }
 
         return ReputationTier::discountForScore($user->getReputation());
+    }
+
+    private function resolveSellerId(): int
+    {
+        $seller = User::where('admin', true)->orderBy('id')->first();
+
+        if (!$seller) {
+            throw new \RuntimeException('No admin seller user found to associate with the order.');
+        }
+
+        return $seller->id;
     }
 
     /**
@@ -135,23 +211,42 @@ class LoanService
             $user = $loanRequest->user;
             $product = $loanRequest->product;
             $deposit = $loanRequest->deposit_amount;
+            $order = $loanRequest->order;
+            $escrow = $loanRequest->escrowTransaction
+                ?? ($order ? $this->escrowService->getActiveEscrow($order) : null);
 
             // Calculate refund (deposit - damage fee)
             if ($isDamaged) {
                 $damageFee = $damageFee ?? ($deposit * 0.5); // Default 50% of deposit if not specified
-                $refundAmount = max(0, $deposit - $damageFee);
+                if ($escrow) {
+                    $escrowResult = $this->escrowService->deductForDamage(
+                        $escrow,
+                        (float) $damageFee,
+                        'Loan return damage'
+                    );
+                    $refundAmount = (float) ($escrowResult['borrower_refund'] ?? 0);
+                } else {
+                    $refundAmount = max(0, $deposit - $damageFee);
+                    if ($refundAmount > 0) {
+                        $user->creditWallet($refundAmount, 'loan_refund', [
+                            'loan_request_id' => $loanRequest->id,
+                            'product_id' => $product->id,
+                            'product_name' => $product->name,
+                        ]);
+                    }
+                }
             } else {
                 $damageFee = 0;
                 $refundAmount = $deposit;
-            }
-
-            // Refund to wallet
-            if ($refundAmount > 0) {
-                $user->creditWallet($refundAmount, 'loan_refund', [
-                    'loan_request_id' => $loanRequest->id,
-                    'product_id' => $product->id,
-                    'product_name' => $product->name,
-                ]);
+                if ($escrow) {
+                    $this->escrowService->refundToBorrower($escrow, 'on_time_return');
+                } else {
+                    $user->creditWallet($refundAmount, 'loan_refund', [
+                        'loan_request_id' => $loanRequest->id,
+                        'product_id' => $product->id,
+                        'product_name' => $product->name,
+                    ]);
+                }
             }
 
             // Update loan request
@@ -172,6 +267,10 @@ class LoanService
                 'refund_amount' => $refundAmount,
                 'damage_fee' => $damageFee,
             ]);
+
+            if ($order) {
+                $this->refreshOrderStatusForLoans($order);
+            }
 
             return $loanRequest->fresh();
         });
@@ -223,12 +322,19 @@ class LoanService
         return DB::transaction(function () use ($loanRequest, $reason) {
             $user = $loanRequest->user;
             $deposit = $loanRequest->deposit_amount;
+            $order = $loanRequest->order;
+            $escrow = $loanRequest->escrowTransaction
+                ?? ($order ? $this->escrowService->getActiveEscrow($order) : null);
 
-            // Refund deposit
-            $user->creditWallet($deposit, 'loan_rejection_refund', [
-                'loan_request_id' => $loanRequest->id,
-                'reason' => $reason,
-            ]);
+            if ($escrow) {
+                $this->escrowService->refundToBorrower($escrow, 'loan_rejected');
+            } else {
+                // Fallback for legacy loans without orders.
+                $user->creditWallet($deposit, 'loan_rejection_refund', [
+                    'loan_request_id' => $loanRequest->id,
+                    'reason' => $reason,
+                ]);
+            }
 
             // Restore product stock
             $loanRequest->product->increment('stock_quantity');
@@ -236,8 +342,12 @@ class LoanService
             // Update status
             $loanRequest->update([
                 'status' => 'Rejected',
-                'details' => $loanRequest->details . ($reason ? "\nRejection reason: {$reason}" : ''),
+                'details' => ($loanRequest->details ?? '') . ($reason ? "\nRejection reason: {$reason}" : ''),
             ]);
+
+            if ($order) {
+                $this->refreshOrderStatusForLoans($order);
+            }
 
             return $loanRequest->fresh();
         });
@@ -278,13 +388,20 @@ class LoanService
             $user = $loanRequest->user;
             $product = $loanRequest->product;
             $deposit = $loanRequest->deposit_amount;
+            $order = $loanRequest->order;
+            $escrow = $loanRequest->escrowTransaction
+                ?? ($order ? $this->escrowService->getActiveEscrow($order) : null);
 
-            // Refund full amount
-            $user->creditWallet($deposit, 'loan_return_refund', [
-                'loan_request_id' => $loanRequest->id,
-                'product_id' => $product->id,
-                'product_name' => $product->name,
-            ]);
+            if ($escrow) {
+                $this->escrowService->refundToBorrower($escrow, 'on_time_return');
+            } else {
+                // Fallback for legacy loans without orders/escrow.
+                $user->creditWallet($deposit, 'loan_return_refund', [
+                    'loan_request_id' => $loanRequest->id,
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                ]);
+            }
 
             // Update loan request
             $loanRequest->update([
@@ -304,7 +421,33 @@ class LoanService
                 'refund_amount' => $deposit,
             ]);
 
+            if ($order) {
+                $this->refreshOrderStatusForLoans($order);
+            }
+
             return $loanRequest->fresh();
         });
+    }
+
+    private function refreshOrderStatusForLoans(Order $order): void
+    {
+        $statuses = $order->loanRequests()->pluck('status')->all();
+
+        if (empty($statuses)) {
+            return;
+        }
+
+        $activeStatuses = ['Requested', 'Approved', 'Picked up', 'Late', 'Return Requested'];
+        $hasActive = !empty(array_intersect($statuses, $activeStatuses));
+
+        if ($hasActive) {
+            $order->update(['status' => 'processing']);
+            return;
+        }
+
+        $terminalStatuses = ['Rejected', 'Cancelled'];
+        $allRejected = empty(array_diff($statuses, $terminalStatuses));
+
+        $order->update(['status' => $allRejected ? 'cancelled' : 'completed']);
     }
 }

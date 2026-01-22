@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Dispute;
 use App\Models\DisputeEvidence;
 use App\Models\DisputeHistory;
+use App\Models\LoanRequest;
 use App\Models\Order;
 use App\Models\User;
 use App\Models\EscrowTransaction;
@@ -31,11 +32,16 @@ class DisputeService
         string $title,
         string $description,
         string $reason, // 'item_damaged', 'not_as_described', 'not_received', 'other'
-        ?float $damageClaimAmount = null
+        ?float $damageClaimAmount = null,
+        ?LoanRequest $loanRequest = null
     ): Dispute {
         // Verify initiator is involved in the order
         if ($initiator->id !== $order->user_id && $initiator->id !== $order->seller_id) {
             throw new RuntimeException('Initiator must be involved in this order.');
+        }
+
+        if ($loanRequest && $loanRequest->order_id !== $order->id) {
+            throw new RuntimeException('Loan does not belong to this order.');
         }
 
         // Determine respondent
@@ -47,6 +53,7 @@ class DisputeService
 
         // Create dispute
         $dispute = $order->disputes()->create([
+            'loan_request_id' => $loanRequest?->id,
             'initiator_id' => $initiator->id,
             'respondent_id' => $respondent->id,
             'title' => $title,
@@ -57,7 +64,7 @@ class DisputeService
         ]);
 
         // Update escrow to awaiting_resolution
-        $escrow = $this->escrowService->getActiveEscrow($order);
+        $escrow = $loanRequest?->escrowTransaction ?? $this->escrowService->getActiveEscrow($order);
         if ($escrow) {
             $escrow->update(['status' => 'awaiting_resolution']);
         }
@@ -133,7 +140,7 @@ class DisputeService
 
         // Get the order and escrow
         $order = $dispute->order;
-        $escrow = $this->escrowService->getActiveEscrow($order);
+        $escrow = $dispute->loanRequest?->escrowTransaction ?? $this->escrowService->getActiveEscrow($order);
 
         if (!$escrow) {
             throw new RuntimeException('No active escrow found for this order.');

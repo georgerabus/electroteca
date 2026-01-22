@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Dispute;
 use App\Models\LoanRequest;
 use App\Models\Product;
 use App\Models\User;
@@ -291,6 +292,46 @@ class AdminController extends Controller
             'filters' => [
                 'status' => $request->get('status', 'All'),
                 'user_id' => $request->get('user_id'),
+            ],
+        ]);
+    }
+
+    public function disputes(Request $request)
+    {
+        $query = Dispute::with(['order', 'loanRequest', 'initiator', 'respondent'])
+            ->orderBy('created_at', 'desc');
+
+        if ($request->filled('status') && $request->status !== 'All') {
+            $query->where('status', $request->status);
+        }
+
+        $disputes = $query->get()->map(function ($dispute) {
+            return [
+                'id' => $dispute->id,
+                'order_id' => $dispute->order_id,
+                'loan_request_id' => $dispute->loan_request_id,
+                'title' => $dispute->title,
+                'reason' => $dispute->reason,
+                'status' => $dispute->status,
+                'damage_claim_amount' => $dispute->damage_claim_amount ? number_format($dispute->damage_claim_amount, 2) : null,
+                'created_at' => $dispute->created_at?->format('Y-m-d H:i:s'),
+                'initiator' => [
+                    'id' => $dispute->initiator?->id,
+                    'name' => $dispute->initiator?->name,
+                    'email' => $dispute->initiator?->email,
+                ],
+                'respondent' => [
+                    'id' => $dispute->respondent?->id,
+                    'name' => $dispute->respondent?->name,
+                    'email' => $dispute->respondent?->email,
+                ],
+            ];
+        });
+
+        return Inertia::render('admin/disputes', [
+            'disputes' => $disputes,
+            'filters' => [
+                'status' => $request->get('status', 'All'),
             ],
         ]);
     }

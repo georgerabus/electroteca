@@ -70,6 +70,11 @@ const adminNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
+        title: 'Disputes',
+        href: '/admin/disputes',
+        icon: Package,
+    },
+    {
         title: 'Reputation',
         href: '/admin/reputation-tiers',
         icon: BadgePercent,

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Dispute;
+use App\Models\LoanRequest;
 use App\Models\Order;
 use App\Services\DisputeService;
 use Illuminate\Http\JsonResponse;
@@ -29,9 +30,15 @@ class DisputeController extends Controller
                 'description' => 'required|string',
                 'reason' => 'required|in:item_damaged,not_as_described,not_received,other',
                 'damage_claim_amount' => 'numeric|nullable|min:0.01',
+                'loan_request_id' => 'nullable|integer|exists:loan_requests,id',
             ]);
 
             $user = auth()->user();
+            $loanRequest = null;
+
+            if (!empty($validated['loan_request_id'])) {
+                $loanRequest = LoanRequest::findOrFail($validated['loan_request_id']);
+            }
 
             $dispute = $this->disputeService->createDispute(
                 $order,
@@ -39,7 +46,8 @@ class DisputeController extends Controller
                 $validated['title'],
                 $validated['description'],
                 $validated['reason'],
-                $validated['damage_claim_amount'] ?? null
+                $validated['damage_claim_amount'] ?? null,
+                $loanRequest
             );
 
             return response()->json([

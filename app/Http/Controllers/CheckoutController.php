@@ -68,6 +68,7 @@ class CheckoutController extends Controller
             $loanRequests = [];
             $totalDeposit = 0;
             $errors = [];
+            $orderCurrency = null;
 
             // First pass: Validate all items and calculate total deposit
             foreach ($cart as $item) {
@@ -91,6 +92,10 @@ class CheckoutController extends Controller
                 // Calculate deposit for this product (multiply by quantity)
                 $deposit = $this->loanService->calculateDepositForUser($product, $user);
                 $totalDeposit += ($deposit * $quantity);
+
+                if ($orderCurrency === null) {
+                    $orderCurrency = $product->currency ?? 'MDL';
+                }
             }
 
             // Validate total wallet balance before processing
@@ -105,20 +110,32 @@ class CheckoutController extends Controller
                 return back()->withErrors(['cart' => $errors])->withInput();
             }
 
+            // Create a single order for the cart
+            $order = $this->loanService->createOrderForLoans(
+                user: $user,
+                totalAmount: $totalDeposit,
+                currency: $orderCurrency ?? 'MDL',
+                shippingAddress: $shippingAddress,
+                notes: $notes
+            );
+
             // Second pass: Create loan requests (one per quantity)
             foreach ($cart as $item) {
                 $product = Product::findOrFail($item['product_id']);
                 $quantity = (int)$item['quantity'];
+                $deposit = $this->loanService->calculateDepositForUser($product, $user);
 
                 // Create multiple loan requests based on quantity
                 for ($i = 0; $i < $quantity; $i++) {
                     try {
-                        $loanRequest = $this->loanService->borrowProduct(
-                            $user,
-                            $product,
-                            $periodFrom,
-                            $periodTo,
-                            $notes
+                        $loanRequest = $this->loanService->createLoanForOrder(
+                            order: $order,
+                            user: $user,
+                            product: $product,
+                            periodFrom: $periodFrom,
+                            periodTo: $periodTo,
+                            details: $notes,
+                            deposit: $deposit
                         );
 
                         $loanRequests[] = $loanRequest;

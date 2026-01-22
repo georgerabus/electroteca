@@ -72,7 +72,7 @@ class LoanController extends Controller
                 $request->details
             );
 
-            return back()->with('success', 'Loan request created successfully. Deposit of ' . $loanRequest->deposit_amount . ' CR has been deducted from your wallet.');
+            return back()->with('success', 'Loan request created successfully. Deposit of ' . $loanRequest->deposit_amount . ' CR has been held in escrow.');
         } catch (\Exception $e) {
             return back()->withErrors(['error' => $e->getMessage()]);
         }
@@ -154,6 +154,7 @@ class LoanController extends Controller
                     'id' => $loan->id,
                     'request_id' => $loan->request_id,
                     'status' => $loan->status,
+                    'order_id' => $loan->order_id,
                     'product' => [
                         'id' => $loan->product->id,
                         'name' => $loan->product->name,

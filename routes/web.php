@@ -10,6 +10,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ReputationController;
+use App\Http\Controllers\DisputeController;
 
 // Route::get('/', function () {
 //     return Inertia::render('welcome');
@@ -56,6 +57,11 @@ Route::middleware(['auth', 'require.2fa'])->group(function () {
     Route::post('loans/{loanRequest}/request-return', [LoanController::class, 'requestReturn'])->name('loans.request-return');
     Route::post('loans/{loanRequest}/return', [LoanController::class, 'returnProduct'])->name('loans.return');
 
+    // Dispute routes (web session)
+    Route::prefix('disputes')->name('disputes.')->group(function () {
+        Route::post('orders/{order}', [DisputeController::class, 'store'])->name('store');
+    });
+
     // Checkout routes
     Route::get('checkout', [CheckoutController::class, 'index'])->name('checkout');
     Route::post('checkout', [CheckoutController::class, 'store'])->name('checkout.store');
@@ -98,6 +104,7 @@ Route::middleware(['auth', 'verified', 'require.2fa'])->group(function () {
             Route::post('reputation-tiers', [AdminController::class, 'storeReputationTier'])->name('reputation-tiers.store');
             Route::put('reputation-tiers/{reputationTier}', [AdminController::class, 'updateReputationTier'])->name('reputation-tiers.update');
             Route::delete('reputation-tiers/{reputationTier}', [AdminController::class, 'destroyReputationTier'])->name('reputation-tiers.destroy');
+            Route::get('disputes', [AdminController::class, 'disputes'])->name('disputes.index');
             
             // Product management
             Route::post('products', [AdminController::class, 'storeProduct'])->name('products.store');
@@ -109,6 +116,9 @@ Route::middleware(['auth', 'verified', 'require.2fa'])->group(function () {
             Route::post('loans/{loanRequest}/reject', [AdminController::class, 'rejectLoan'])->name('loans.reject');
             Route::post('loans/{loanRequest}/picked-up', [AdminController::class, 'markAsPickedUp'])->name('loans.picked-up');
             Route::post('loans/{loanRequest}/approve-return', [AdminController::class, 'approveReturn'])->name('loans.approve-return');
+
+            // Dispute actions
+            Route::post('disputes/{dispute}/resolve', [DisputeController::class, 'resolve'])->name('disputes.resolve');
             
             // Payment management
             Route::post('payments/{payment}/refund', [PaymentController::class, 'refund'])->name('payments.refund');

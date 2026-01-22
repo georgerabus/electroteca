@@ -1,6 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertCircle, ArrowLeft, Calendar, CheckCircle, Clock, DollarSign, Package, XCircle } from 'lucide-react';
 import { type SharedData } from '@/types';
 
@@ -8,6 +9,7 @@ type Loan = {
     id: number;
     request_id: string;
     status: string;
+    order_id?: number | null;
     product: {
         id: number;
         name: string;
@@ -67,6 +69,14 @@ const getStatusIcon = (status: string) => {
 export default function MyLoans({ loans }: MyLoansPageProps) {
     const { auth } = usePage<SharedData>().props;
     const [returningLoanIds, setReturningLoanIds] = useState<Set<number>>(new Set());
+    const [activeDisputeLoan, setActiveDisputeLoan] = useState<Loan | null>(null);
+    const [disputeTitle, setDisputeTitle] = useState('');
+    const [disputeReason, setDisputeReason] = useState('item_damaged');
+    const [disputeDescription, setDisputeDescription] = useState('');
+    const [disputeDamageAmount, setDisputeDamageAmount] = useState('');
+    const [isSubmittingDispute, setIsSubmittingDispute] = useState(false);
+    const [disputeError, setDisputeError] = useState<string | null>(null);
+    const portalTarget = typeof document === 'undefined' ? null : document.body;
 
     const handleRequestReturn = (loanId: number) => {
         // Don't allow multiple clicks on the same button
@@ -99,6 +109,67 @@ export default function MyLoans({ loans }: MyLoansPageProps) {
 
     const canRequestReturn = (status: string) => {
         return ['Approved', 'Picked up', 'Late'].includes(status);
+    };
+
+    const canOpenDispute = (loan: Loan) => {
+        return !!loan.order_id && ['Approved', 'Picked up', 'Late', 'Return Requested', 'Defective'].includes(loan.status);
+    };
+
+    const closeDisputeModal = () => {
+        setActiveDisputeLoan(null);
+        setDisputeTitle('');
+        setDisputeReason('item_damaged');
+        setDisputeDescription('');
+        setDisputeDamageAmount('');
+        setDisputeError(null);
+    };
+
+    const submitDispute = async () => {
+        if (!activeDisputeLoan?.order_id) {
+            return;
+        }
+
+        if (!disputeTitle.trim() || !disputeDescription.trim()) {
+            setDisputeError('Title and description are required.');
+            return;
+        }
+
+        const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content;
+
+        setIsSubmittingDispute(true);
+        setDisputeError(null);
+
+        try {
+            const response = await fetch(`/disputes/orders/${activeDisputeLoan.order_id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken || '',
+                },
+                body: JSON.stringify({
+                    loan_request_id: activeDisputeLoan.id,
+                    title: disputeTitle.trim(),
+                    description: disputeDescription.trim(),
+                    reason: disputeReason,
+                    damage_claim_amount: disputeDamageAmount ? Number(disputeDamageAmount) : null,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                setDisputeError(data.error || 'Failed to create dispute.');
+                return;
+            }
+
+            closeDisputeModal();
+            alert('Dispute created. An admin will review it.');
+        } catch (error) {
+            setDisputeError(error instanceof Error ? error.message : 'Failed to create dispute.');
+        } finally {
+            setIsSubmittingDispute(false);
+        }
     };
 
     return (
@@ -221,6 +292,18 @@ export default function MyLoans({ loans }: MyLoansPageProps) {
                                             </div>
                                         )}
 
+                                        {canOpenDispute(loan) && (
+                                            <div className="mt-3">
+                                                <button
+                                                    onClick={() => setActiveDisputeLoan(loan)}
+                                                    type="button"
+                                                    className="w-full rounded-xl bg-amber-500/90 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-500 transition"
+                                                >
+                                                    Open Dispute
+                                                </button>
+                                            </div>
+                                        )}
+
                                         {/* Return Requested Status */}
                                         {loan.status === 'Return Requested' && (
                                             <div className="mt-4 p-4 bg-yellow-500/20 border border-yellow-500/50 rounded-lg">
@@ -236,7 +319,91 @@ export default function MyLoans({ loans }: MyLoansPageProps) {
                     </div>
                 )}
             </div>
+
+            {activeDisputeLoan && portalTarget
+                ? createPortal(
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+                        <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-zinc-900 p-6 text-white">
+                            <h2 className="text-xl font-semibold mb-2">Open Dispute</h2>
+                            <p className="text-sm text-gray-400 mb-4">
+                                Loan: {activeDisputeLoan.product.name} (Request {activeDisputeLoan.request_id})
+                            </p>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm text-gray-300 mb-1">Title</label>
+                                    <input
+                                        value={disputeTitle}
+                                        onChange={(e) => setDisputeTitle(e.target.value)}
+                                        className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm"
+                                        placeholder="e.g. Item arrived damaged"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm text-gray-300 mb-1">Reason</label>
+                                    <select
+                                        value={disputeReason}
+                                        onChange={(e) => setDisputeReason(e.target.value)}
+                                        className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm"
+                                    >
+                                        <option value="item_damaged">Item damaged</option>
+                                        <option value="not_as_described">Not as described</option>
+                                        <option value="not_received">Not received</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm text-gray-300 mb-1">Description</label>
+                                    <textarea
+                                        value={disputeDescription}
+                                        onChange={(e) => setDisputeDescription(e.target.value)}
+                                        className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm min-h-[120px]"
+                                        placeholder="Describe what happened..."
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm text-gray-300 mb-1">Damage claim amount (optional)</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={disputeDamageAmount}
+                                        onChange={(e) => setDisputeDamageAmount(e.target.value)}
+                                        className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm"
+                                        placeholder="0.00"
+                                    />
+                                </div>
+
+                                {disputeError && (
+                                    <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+                                        {disputeError}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="mt-6 flex justify-end gap-2">
+                                <button
+                                    onClick={closeDisputeModal}
+                                    className="rounded-lg border border-white/10 px-4 py-2 text-sm text-gray-300 hover:text-white"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={submitDispute}
+                                    disabled={isSubmittingDispute}
+                                    className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isSubmittingDispute ? 'Submitting...' : 'Submit Dispute'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>,
+                    portalTarget,
+                )
+                : null}
         </AppLayout>
     );
 }
-

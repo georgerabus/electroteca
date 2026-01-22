@@ -15,6 +15,8 @@ class LoanRequest extends Model
         'status',
         'product_id',
         'user_id',
+        'order_id',
+        'escrow_transaction_id',
         'period_from',
         'period_to',
         'details',
@@ -45,6 +47,16 @@ class LoanRequest extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    public function escrowTransaction(): BelongsTo
+    {
+        return $this->belongsTo(EscrowTransaction::class);
     }
 
     protected static function boot()

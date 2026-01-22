@@ -67,13 +67,14 @@ class EscrowService
         ]);
 
         // Set return deadline
-        $returnDeadline = now()->addDays($inspectionPeriodDays);
-        $order->update([
-            'escrow_amount' => $amount,
-            'escrow_status' => 'held',
-            'return_deadline' => $returnDeadline,
-            'inspection_period_days' => $inspectionPeriodDays,
-        ]);
+        if (!$order->return_deadline) {
+            $order->return_deadline = now()->addDays($inspectionPeriodDays);
+        }
+
+        $order->escrow_amount = (float) ($order->escrow_amount ?? 0) + $amount;
+        $order->escrow_status = 'held';
+        $order->inspection_period_days = $inspectionPeriodDays;
+        $order->save();
 
         return $escrowTransaction;
     }
@@ -113,16 +114,49 @@ class EscrowService
             'notes' => "Escrow released for order {$order->order_number}. Reason: {$reason}",
         ]);
 
-        // Update order status
-        $order->update([
-            'escrow_status' => 'released',
-        ]);
+        $this->refreshOrderEscrowStatus($order);
 
         return $escrow;
     }
 
     /**
-     * Partially deduct escrow for damages and release remaining balance to seller
+     * Refund held escrow funds back to borrower (normal return)
+     */
+    public function refundToBorrower(EscrowTransaction $escrow, string $reason = 'on_time_return'): EscrowTransaction
+    {
+        if (!$escrow->isHeld() && $escrow->status !== 'awaiting_resolution') {
+            throw new RuntimeException('Escrow must be held or awaiting resolution to refund.');
+        }
+
+        $order = $escrow->order;
+        $borrower = $order->user;
+
+        $borrower->walletTransactions()->create([
+            'amount' => $escrow->amount,
+            'type' => 'credit',
+            'reason' => 'escrow_refund',
+            'meta' => [
+                'order_id' => $order->id,
+                'type' => 'escrow_refund',
+            ],
+        ]);
+
+        $borrower->increment('wallet_balance', $escrow->amount);
+
+        $escrow->update([
+            'status' => 'released',
+            'released_at' => now(),
+            'reason_code' => $reason,
+            'notes' => "Escrow refunded to borrower for order {$order->order_number}. Reason: {$reason}",
+        ]);
+
+        $this->refreshOrderEscrowStatus($order);
+
+        return $escrow;
+    }
+
+    /**
+     * Partially deduct escrow for damages and refund the remainder to borrower
      */
     public function deductForDamage(
         EscrowTransaction $escrow,
@@ -141,57 +175,58 @@ class EscrowService
         $seller = $order->seller;
         $borrower = $order->user;
 
-        $remainingAmount = $escrow->amount - $damageAmount;
+        $refundAmount = $escrow->amount - $damageAmount;
 
-        // Create damage deduction transaction in borrower's wallet
-        $borrower->walletTransactions()->create([
-            'amount' => $damageAmount,
-            'type' => 'debit',
-            'reason' => 'damage_deduction',
-            'meta' => [
-                'order_id' => $order->id,
-                'escrow_transaction_id' => $escrow->id,
-                'description' => $damageDescription,
-            ],
-        ]);
+        if ($refundAmount > 0) {
+            $borrower->walletTransactions()->create([
+                'amount' => $refundAmount,
+                'type' => 'credit',
+                'reason' => 'escrow_refund_partial',
+                'meta' => [
+                    'order_id' => $order->id,
+                    'escrow_transaction_id' => $escrow->id,
+                    'damage_deducted' => $damageAmount,
+                ],
+            ]);
 
-        // Credit remaining to seller
-        $seller->walletTransactions()->create([
-            'amount' => $remainingAmount,
-            'type' => 'credit',
-            'reason' => 'escrow_release_partial',
-            'meta' => [
-                'order_id' => $order->id,
-                'from_user_id' => $borrower->id,
-                'damage_deducted' => $damageAmount,
-            ],
-        ]);
+            $borrower->increment('wallet_balance', $refundAmount);
+        }
 
-        $seller->increment('wallet_balance', $remainingAmount);
+        if ($seller) {
+            $seller->walletTransactions()->create([
+                'amount' => $damageAmount,
+                'type' => 'credit',
+                'reason' => 'damage_fee_awarded',
+                'meta' => [
+                    'order_id' => $order->id,
+                    'from_user_id' => $borrower->id,
+                    'damage_deducted' => $damageAmount,
+                ],
+            ]);
+
+            $seller->increment('wallet_balance', $damageAmount);
+        }
 
         // Update escrow transaction
         $escrow->update([
             'status' => 'deducted',
             'released_at' => now(),
             'reason_code' => 'damage_fee',
-            'notes' => "Escrow partially deducted. Damage: {$damageAmount}, Released: {$remainingAmount}. Description: {$damageDescription}",
+            'notes' => "Escrow damage deduction. Damage: {$damageAmount}, Refunded: {$refundAmount}. Description: {$damageDescription}",
             'metadata' => [
                 'damage_amount' => $damageAmount,
-                'released_amount' => $remainingAmount,
+                'refund_amount' => $refundAmount,
                 'damage_description' => $damageDescription,
             ],
         ]);
 
-        // Update order
-        $order->update([
-            'escrow_status' => 'partially_deducted',
-        ]);
+        $this->refreshOrderEscrowStatus($order);
 
         return [
             'escrow' => $escrow,
             'damage_deducted' => $damageAmount,
-            'seller_received' => $remainingAmount,
-            'borrower_charged' => $damageAmount,
+            'seller_received' => $seller ? $damageAmount : 0,
+            'borrower_refund' => $refundAmount,
         ];
     }
 
@@ -228,10 +263,7 @@ class EscrowService
             'notes' => "Escrow refunded to borrower. Reason: {$reason}",
         ]);
 
-        // Update order
-        $order->update([
-            'escrow_status' => 'cancelled',
-        ]);
+        $this->refreshOrderEscrowStatus($order);
 
         return $escrow;
     }
@@ -271,6 +303,10 @@ class EscrowService
             ]);
             $result['borrower_receives'] = $escrow->amount;
         } elseif ($resolution === 'respondent_wins') {
+            if (!$seller) {
+                throw new RuntimeException('Order has no seller to receive funds.');
+            }
+
             // Respondent (seller) gets full amount
             $seller->increment('wallet_balance', $escrow->amount);
             $seller->walletTransactions()->create([
@@ -281,29 +317,31 @@ class EscrowService
             ]);
             $result['seller_receives'] = $escrow->amount;
         } elseif ($resolution === 'compromise') {
-            // Split: deduct damage, rest to seller
+            // Split: borrower refunded, damage portion awarded to seller
             if ($damageAmount > 0 && $damageAmount < $escrow->amount) {
-                $toSeller = $escrow->amount - $damageAmount;
+                $refundAmount = $escrow->amount - $damageAmount;
 
-                $borrower->walletTransactions()->create([
-                    'amount' => $damageAmount,
-                    'type' => 'debit',
-                    'reason' => 'dispute_compromise_deduction',
-                    'meta' => ['order_id' => $order->id],
-                ]);
-                $borrower->decrement('wallet_balance', $damageAmount);
+                if ($refundAmount > 0) {
+                    $borrower->increment('wallet_balance', $refundAmount);
+                    $borrower->walletTransactions()->create([
+                        'amount' => $refundAmount,
+                        'type' => 'credit',
+                        'reason' => 'dispute_compromise_refund',
+                        'meta' => ['order_id' => $order->id],
+                    ]);
+                    $result['borrower_receives'] = $refundAmount;
+                }
 
-                $seller->increment('wallet_balance', $toSeller);
-                $seller->walletTransactions()->create([
-                    'amount' => $toSeller,
-                    'type' => 'credit',
-                    'reason' => 'dispute_compromise_awarded',
-                    'meta' => ['order_id' => $order->id],
-                ]);
-
-                $result['borrower_receives'] = 0;
-                $result['seller_receives'] = $toSeller;
-                $result['borrower_charged'] = $damageAmount;
+                if ($seller) {
+                    $seller->increment('wallet_balance', $damageAmount);
+                    $seller->walletTransactions()->create([
+                        'amount' => $damageAmount,
+                        'type' => 'credit',
+                        'reason' => 'dispute_compromise_awarded',
+                        'meta' => ['order_id' => $order->id],
+                    ]);
+                    $result['seller_receives'] = $damageAmount;
+                }
             }
         }
 
@@ -319,9 +357,38 @@ class EscrowService
             ]),
         ]);
 
-        $order->update(['escrow_status' => 'released']);
+        $this->refreshOrderEscrowStatus($order);
 
         return $result;
+    }
+
+    private function refreshOrderEscrowStatus(Order $order): void
+    {
+        $statuses = $order->escrowTransactions()->pluck('status')->all();
+
+        if (empty($statuses)) {
+            $order->update(['escrow_status' => 'none']);
+            return;
+        }
+
+        $hasHeld = in_array('held', $statuses, true) || in_array('awaiting_resolution', $statuses, true);
+        $hasDeducted = in_array('deducted', $statuses, true);
+        $hasReleased = in_array('released', $statuses, true);
+        $hasRefunded = in_array('refunded', $statuses, true) || in_array('cancelled', $statuses, true);
+
+        if ($hasHeld) {
+            $status = 'held';
+        } elseif ($hasDeducted) {
+            $status = 'partially_deducted';
+        } elseif ($hasReleased) {
+            $status = 'released';
+        } elseif ($hasRefunded) {
+            $status = 'cancelled';
+        } else {
+            $status = 'none';
+        }
+
+        $order->update(['escrow_status' => $status]);
     }
 
     /**

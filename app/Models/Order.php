@@ -57,6 +57,11 @@ class Order extends Model
         return $this->hasMany(EscrowTransaction::class);
     }
 
+    public function loanRequests(): HasMany
+    {
+        return $this->hasMany(LoanRequest::class);
+    }
+
     /**
      * Get the active escrow transaction for this order
      */

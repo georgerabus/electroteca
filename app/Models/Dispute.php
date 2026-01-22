@@ -13,6 +13,7 @@ class Dispute extends Model
 
     protected $fillable = [
         'order_id',
+        'loan_request_id',
         'initiator_id',
         'respondent_id',
         'title',
@@ -47,6 +48,11 @@ class Dispute extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function loanRequest(): BelongsTo
+    {
+        return $this->belongsTo(LoanRequest::class);
     }
 
     /**
