@@ -161,7 +161,13 @@ php artisan test
 ```bash
 ./zap-scan.sh
 ```
+## 📚 Documentation
 
----
----
+Additional documentation available in the repository:
+
+- `SECURITY_GUIDE.md`
+- `ESCROW_SYSTEM_GUIDE.md`
+- `PAYMENT_SETUP_GUIDE.md`
+- `REPUTATION.md`
+- `IMPLEMENTATION_SUMMARY.md`
 
