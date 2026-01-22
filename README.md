@@ -1,7 +1,7 @@
 # Electroteca  
 A policy-driven electronics lending platform
 
-## Overview
+## 📌 Overview
 Electroteca is a full-stack web application designed to enable secure, transparent, and efficient lending of electronic devices within academic and professional communities. The platform introduces a policy-driven lending model that combines institutional inventory management—where universities publish and govern their own devices—with verified peer-to-peer contributions, allowing individuals to list personal equipment and earn credits when those devices are borrowed.
 
 The system emphasizes trust, accountability, and safety through strong security controls, user verification, device condition logging, escrow-based payments, reputation tracking, and calibration records. Electroteca provides a modern and scalable solution for managing shared electronic resources responsibly.
@@ -72,5 +72,96 @@ Implemented security measures include:
 
 📄 Full details are available in **`SECURITY_GUIDE.md`**
 
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- PHP 8.2+
+- Composer
+- Node.js 18+ & npm
+- Docker & Docker Compose (recommended)
+
+---
+
+## 1. Environment Setup
+
+On Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Generate the application key:
+
+```bash
+php artisan key:generate
+```
+
+Configure the following in `.env`:
+
+- Database credentials  
+- OAuth (Google / Azure AD)  
+- Email configuration (for 2FA)  
+- Payment configuration (Paddle)  
+- HTTPS enforcement (production)
+
+---
+
+## 2. Running with Docker (Recommended)
+
+Build and start the application:
+
+```bash
+docker compose up --build
+```
+
+Access the application:
+
+- **Web App:** http://localhost  
+- **API:** http://localhost/api  
+
+Stop the containers:
+
+```bash
+docker compose down
+```
+
+---
+
+## 3. Running Locally (Development Mode)
+
+### Backend (Laravel)
+
+```bash
+composer install
+php artisan migrate
+php artisan serve
+```
+
+### Frontend (React + Vite)
+
+```bash
+npm install
+npm run dev
+```
+
+---
+
+## 🧪 Running Tests
+
+### Backend Tests
+
+```bash
+php artisan test
+```
+
+### Security Testing (OWASP ZAP)
+
+```bash
+./zap-scan.sh
+```
+
+---
 ---
 
