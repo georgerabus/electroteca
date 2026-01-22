@@ -46,3 +46,27 @@ The system emphasizes trust, accountability, and safety through strong security 
 - System monitoring and management
 
 ## Tech Stack
+
+### Frontend
+- React 19
+- Inertia.js
+- Vite
+- Tailwind CSS
+- TypeScript
+- Radix UI
+
+### Backend
+- PHP 8.2
+- Laravel 12
+- Laravel Fortify
+- Laravel Socialite
+- Laravel Cashier (Paddle payments)
+
+### Database
+- MySQL or PostgreSQL
+
+### DevOps & Tooling
+- Docker & Laravel Sail
+- Vite build system
+- Pest (Testing)
+- OWASP ZAP (Security testing)
