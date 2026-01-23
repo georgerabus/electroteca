@@ -142,7 +142,10 @@ class ProductSeeder extends Seeder
         ];
 
         foreach ($products as $product) {
-            Product::create($product);
+            Product::updateOrCreate(
+                ['slug' => $product['slug']],
+                $product
+            );
         }
     }
 }
