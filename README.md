@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.svg" alt="Electroteca Logo" width="120" />
+</p>
+
 # Electroteca  
 A policy-driven electronics lending platform
 
