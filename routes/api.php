@@ -5,6 +5,13 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\EscrowController;
 use App\Http\Controllers\DisputeController;
 
+Route::get('health', function () {
+    return response()->json([
+        'status' => 'ok',
+        'timestamp' => now()->toIso8601String(),
+    ]);
+})->name('health');
+
 Route::post('webhooks/paddle', [PaymentController::class, 'paddleWebhook'])->name('webhooks.paddle');
 
 // Escrow Routes

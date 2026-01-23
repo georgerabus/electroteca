@@ -297,8 +297,6 @@ class PaymentService
             logger()->info('PADDLE tx create response', [
                 'id' => $data['id'] ?? null,
                 'status' => $data['status'] ?? null,
-                'customer_id' => $data['customer_id'] ?? null,
-                'address_id' => $data['address_id'] ?? null,
             ]);
 
             $txnId = $data['id'] ?? null;
@@ -478,21 +476,30 @@ private function paddlePost(string $path, array $payload): array
         ])
         ->post($url, $payload);
 
-    // IMPORTANT: vezi exact ce întoarce Paddle
-    logger()->info('PADDLE raw response', [
-        'url' => $url,
-        'status' => $res->status(),
-        'body' => $res->body(),
-    ]);
-
     if (!$res->successful()) {
-        throw new Exception('Paddle API error: ' . $res->body());
+        logger()->warning('PADDLE API error', [
+            'url' => $url,
+            'status' => $res->status(),
+        ]);
+        throw new Exception('Paddle API error: HTTP ' . $res->status());
     }
 
     $json = $res->json();
     if (!is_array($json) || !array_key_exists('data', $json) || !is_array($json['data'])) {
-        throw new Exception('Paddle API unexpected response: ' . $res->body());
+        logger()->warning('PADDLE API unexpected response', [
+            'url' => $url,
+            'status' => $res->status(),
+        ]);
+        throw new Exception('Paddle API unexpected response');
     }
+
+    // IMPORTANT: vezi exact ce întoarce Paddle
+    logger()->info('PADDLE response', [
+        'url' => $url,
+        'status' => $res->status(),
+        'id' => $json['data']['id'] ?? null,
+        'response_status' => $json['data']['status'] ?? null,
+    ]);
 
     return $json['data'];
 }

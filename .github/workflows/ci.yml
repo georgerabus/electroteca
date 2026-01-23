@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, pdo_sqlite
+          coverage: none
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Prepare app env
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          php -r "file_exists('database/database.sqlite') || touch('database/database.sqlite');"
+      - name: Install JS dependencies
+        run: npm ci
+      - name: Build frontend
+        run: npm run build
+      - name: Run tests
+        run: composer test

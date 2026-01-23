@@ -12,5 +12,12 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             ProductSeeder::class,
         ]);
+
+        $demoEnabled = filter_var(env('DEMO_USER_ENABLED', false), FILTER_VALIDATE_BOOLEAN);
+        if (!app()->environment('production') && $demoEnabled) {
+            $this->call([
+                DemoUserSeeder::class,
+            ]);
+        }
     }
 }

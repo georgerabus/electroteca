@@ -52,9 +52,74 @@ The system emphasizes trust, accountability, and safety through strong security 
 
 **Backend:** PHP 8.2, Laravel 12, Laravel Fortify, Laravel Socialite, Laravel Cashier (Paddle).  
 
-**Database:** MySQL or PostgreSQL.  
+**Database:** SQLite (default), MySQL, or PostgreSQL.  
 
 **DevOps & Tooling:** Docker & Laravel Sail, Vite build system, Pest (Testing), OWASP ZAP (Security Testing).
+
+## Quick Start (Local)
+
+Requirements:
+- PHP 8.2+
+- Composer
+- Node 20+ and npm
+- SQLite (default) or MySQL/PostgreSQL
+
+Setup and run:
+```bash
+composer run setup
+composer run dev
+```
+
+The setup script creates the sqlite database file, generates the app key, runs migrations and seeds, and builds the frontend.
+
+## Default Credentials (Development)
+
+After `php artisan db:seed` (or `composer run setup`), use:
+- Email: admin@example.com
+- Password: Password123!
+
+These values come from `.env.example` and are controlled by `DEMO_USER_*` variables. Disable in production by setting `DEMO_USER_ENABLED=false`.
+
+## Testing
+
+```bash
+composer test
+```
+
+## CI/CD
+
+GitHub Actions workflow: `.github/workflows/ci.yml`
+- Installs PHP and JS dependencies
+- Builds the frontend
+- Runs the test suite
+- Fails on any test or build error
+
+## Deployment (VPS via SSH)
+
+Workflow: `.github/workflows/deploy.yml` (runs on push to `main` when secrets are set).
+
+Required GitHub Secrets:
+- VPS_HOST
+- VPS_USER
+- VPS_SSH_KEY
+- VPS_PORT (optional, defaults to 22)
+- VPS_PATH (absolute path to the repo on the server)
+
+Server prerequisites:
+- PHP 8.2+, Composer
+- Node 20+ and npm
+- A configured `.env` file on the server
+
+Recommended production settings:
+- APP_ENV=production
+- APP_DEBUG=false
+- FORCE_HTTPS=true
+- CSP_ALLOW_DEV=false
+- SESSION_SECURE_COOKIE=true
+
+## Health Check
+
+`GET /api/health` returns a JSON status payload.
 
 ## 🔐 Security Overview
 
