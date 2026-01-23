@@ -29,7 +29,7 @@ use App\Http\Controllers\DisputeController;
 
 Route::get('/', function () {
     return Inertia::render('main');
-})->name('main');
+})->name('home');
 
 Route::get('/shop', [ProductsController::class, 'index'])->name('products');
 Route::get('/shop/{slug}', [ProductsController::class, 'show'])->name('products.show');
